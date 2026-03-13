@@ -25,16 +25,25 @@ export const metadata: Metadata = {
   title: 'The Daily Slice',
   description: 'Vote the best slice in town. A daily pizza battle for Lake Orion & Rochester Hills.',
   manifest: '/manifest.json',
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: '48x48', type: 'image/x-icon' },
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
+  },
   appleWebApp: {
     capable: true,
-    statusBarStyle: 'default',
+    statusBarStyle: 'black-translucent',
     title: 'The Daily Slice',
   },
   openGraph: {
     title: 'The Daily Slice',
     description: 'Vote the best slice in town.',
     type: 'website',
-    images: ['/og-image.jpg'],
+    images: ['/icon-512.png'],
   },
 };
 
