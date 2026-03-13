@@ -10,9 +10,10 @@ interface BattleCardProps {
   dimmed?: boolean;
   disabled?: boolean;
   isLeading?: boolean;
+  bounce?: boolean;
 }
 
-export default function BattleCard({ name, image, side, onClick, selected, dimmed, disabled, isLeading }: BattleCardProps) {
+export default function BattleCard({ name, image, side, onClick, selected, dimmed, disabled, isLeading, bounce }: BattleCardProps) {
   const accentColor = side === 'a' ? '#D93025' : '#1C1C1C';
   const fallbackGradient =
     side === 'a'
@@ -23,6 +24,7 @@ export default function BattleCard({ name, image, side, onClick, selected, dimme
     <button
       onClick={onClick}
       disabled={disabled}
+      className={bounce ? 'animate-vote-bounce' : undefined}
       style={{
         flex: 1,
         background: 'none',
@@ -37,7 +39,7 @@ export default function BattleCard({ name, image, side, onClick, selected, dimme
         outlineOffset: '2px',
         transform: selected ? 'scale(1.03)' : dimmed ? 'scale(0.97)' : 'scale(1)',
         opacity: dimmed ? 0.45 : 1,
-        transition: 'transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease, outline-color 0.15s ease',
+        transition: bounce ? 'none' : 'transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease, outline-color 0.15s ease',
       }}
     >
       <div

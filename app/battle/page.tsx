@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { MapPin, ChevronRight, Bell } from 'lucide-react';
-import type { Battle, VoteSelection, StreakData } from '@/types';
+import type { Battle, Deal, VoteSelection, StreakData } from '@/types';
 import { getVoteForBattle, getOrCreateSessionId, saveVote } from '@/lib/session';
 import { getStreak, recordDailyVote } from '@/lib/streak';
 import { logEvent } from '@/lib/analytics';
@@ -28,15 +28,26 @@ export default function BattlePage() {
   const [streak, setStreak] = useState<StreakData | null>(null);
   const [newMilestone, setNewMilestone] = useState<number | null>(null);
   const [notifStatus, setNotifStatus] = useState<NotifStatus>('idle');
+  const [bounceSide, setBounceSide] = useState<'a' | 'b' | null>(null);
+  const [featuredDeal, setFeaturedDeal] = useState<Deal | null>(null);
 
   // Load battle + existing vote + streak on mount
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch('/api/battle');
-        if (!res.ok) throw new Error('No battle today');
-        const data: Battle = await res.json();
+        const [battleRes, dealsRes] = await Promise.all([
+          fetch('/api/battle'),
+          fetch('/api/deals'),
+        ]);
+
+        if (!battleRes.ok) throw new Error('No battle today');
+        const data: Battle = await battleRes.json();
         setBattle(data);
+
+        if (dealsRes.ok) {
+          const deals: Deal[] = await dealsRes.json();
+          if (deals.length > 0) setFeaturedDeal(deals[0]);
+        }
 
         const existingVote = getVoteForBattle(data.id);
         if (existingVote) {
@@ -91,6 +102,11 @@ export default function BattlePage() {
   async function handleCardVote(side: 'a' | 'b') {
     if (voted || voting || !battle) return;
     setVoting(true);
+
+    // Haptic + bounce
+    if (navigator.vibrate) navigator.vibrate(25);
+    setBounceSide(side);
+    setTimeout(() => setBounceSide(null), 320);
 
     const sessionId = getOrCreateSessionId();
 
@@ -180,19 +196,23 @@ export default function BattlePage() {
   }
 
   const aIsLeading = battle.votes_a >= battle.votes_b;
+  const totalVotes = battle.votes_a + battle.votes_b;
 
   return (
     <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
       <header style={{ padding: '20px 20px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
-          <h1 style={{ fontFamily: 'var(--font-playfair, "Playfair Display", serif)', fontWeight: 700, fontSize: '1.5rem', margin: '0 0 4px', color: '#1C1C1C', letterSpacing: '-0.02em' }}>
+          <h1 style={{ fontFamily: 'var(--font-playfair, "Playfair Display", serif)', fontWeight: 700, fontSize: '1.5rem', margin: '0 0 2px', color: '#1C1C1C', letterSpacing: '-0.02em' }}>
             The Daily Slice
           </h1>
           <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8125rem', color: '#8A7A6A' }}>
             <MapPin size={12} />
             {battle.location}
           </span>
+          <p style={{ margin: '2px 0 0', fontSize: '0.75rem', color: '#8A7A6A', fontStyle: 'italic' }}>
+            Vote daily. Decide the best pizza in your city.
+          </p>
         </div>
         <Countdown />
       </header>
@@ -203,6 +223,12 @@ export default function BattlePage() {
           <>
             {/* Battle title */}
             <div className="animate-fade-up" style={{ textAlign: 'center' }}>
+              {/* Pre-vote streak badge */}
+              {streak && streak.current >= 1 && (
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>
+                  <StreakBadge streak={streak.current} />
+                </div>
+              )}
               <span className="badge badge-tomato" style={{ marginBottom: '10px' }}>Today&apos;s Battle</span>
               <h2 style={{ fontFamily: 'var(--font-playfair, "Playfair Display", serif)', fontWeight: 700, fontSize: '1.375rem', color: '#1C1C1C', margin: 0, letterSpacing: '-0.02em', lineHeight: 1.25 }}>
                 {battle.title}
@@ -210,6 +236,12 @@ export default function BattlePage() {
               {battle.description && (
                 <p style={{ margin: '8px 0 0', fontSize: '0.875rem', color: '#8A7A6A', lineHeight: 1.5 }}>
                   {battle.description}
+                </p>
+              )}
+              {/* Social proof */}
+              {totalVotes > 0 && (
+                <p style={{ fontSize: '0.8125rem', color: '#D93025', fontWeight: 700, margin: '6px 0 0' }}>
+                  🔥 {totalVotes.toLocaleString()} {totalVotes === 1 ? 'person' : 'people'} voted today
                 </p>
               )}
             </div>
@@ -227,6 +259,7 @@ export default function BattlePage() {
                 side="a"
                 onClick={() => handleCardVote('a')}
                 disabled={voting}
+                bounce={bounceSide === 'a'}
               />
               <div style={{ display: 'flex', alignItems: 'center' }}>
                 <span className="vs-divider">VS</span>
@@ -237,6 +270,7 @@ export default function BattlePage() {
                 side="b"
                 onClick={() => handleCardVote('b')}
                 disabled={voting}
+                bounce={bounceSide === 'b'}
               />
             </div>
           </>
@@ -290,6 +324,28 @@ export default function BattlePage() {
             <div className="card" style={{ padding: '20px', marginBottom: '16px' }}>
               <ResultsBar battle={battle} voted={voted} />
             </div>
+
+            {/* Featured deal card */}
+            {featuredDeal && (
+              <Link
+                href="/deals"
+                style={{ display: 'block', background: '#FFFFFF', borderRadius: 14, padding: '14px 16px', marginBottom: '16px', boxShadow: '0 2px 12px rgba(28,28,28,0.10)', textDecoration: 'none' }}
+                onClick={() => logEvent({ event_name: 'deal_clicked', session_id: getOrCreateSessionId(), deal_id: featuredDeal.id, metadata: { cta_type: 'order', restaurant: featuredDeal.restaurant_name, source: 'battle_results' } })}
+              >
+                <p style={{ margin: 0, fontSize: '0.6875rem', fontWeight: 700, color: '#8A7A6A', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                  Featured Deal
+                </p>
+                <p style={{ margin: '3px 0 0', fontFamily: 'var(--font-playfair, "Playfair Display", serif)', fontWeight: 700, fontSize: '1rem', color: '#D93025' }}>
+                  {featuredDeal.restaurant_name}
+                </p>
+                <p style={{ margin: '2px 0 0', fontSize: '0.875rem', color: '#3A3A3A' }}>
+                  {featuredDeal.title}
+                </p>
+                <p style={{ margin: '6px 0 0', fontSize: '0.75rem', fontWeight: 600, color: '#D93025' }}>
+                  See all deals →
+                </p>
+              </Link>
+            )}
 
             {/* Come back tomorrow + notification CTA */}
             <div style={{ background: '#F2E8D0', borderRadius: 14, padding: '16px 20px', marginBottom: '16px', textAlign: 'center' }}>

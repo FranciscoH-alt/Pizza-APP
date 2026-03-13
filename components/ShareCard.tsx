@@ -168,6 +168,11 @@ export default function ShareCard({ battle, voted, onShare }: ShareCardProps) {
         </p>
       </div>
 
+      {/* Share section label */}
+      <p style={{ textAlign: 'center', fontFamily: 'var(--font-playfair, "Playfair Display", serif)', fontWeight: 700, fontSize: '0.9375rem', color: '#1C1C1C', margin: 0 }}>
+        Prove your city is right 🍕
+      </p>
+
       {/* Social share buttons */}
       <div style={{ display: 'flex', gap: '8px' }}>
         {socialButtons.map((btn) => (
