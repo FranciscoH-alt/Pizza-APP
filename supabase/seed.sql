@@ -161,7 +161,7 @@ INSERT INTO deals (restaurant_name, title, description, area, expiration, phone,
 (
   'Little Caesars',
   '$5 Off Any $30+ Order',
-  'Add items to cart — code applied at checkout. Use code 5OFF30.',
+  'Add items to cart — discount applies at checkout. Use code 5OFF30.',
   'Lake Orion',
   NULL,
   NULL,
