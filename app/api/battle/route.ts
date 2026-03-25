@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseServer } from '@/lib/supabase/server';
 import { logServerEvent } from '@/lib/analytics-server';
-import { getClientIp } from '@/lib/ip';
+import { getClientGeo } from '@/lib/ip';
 
 export async function GET(req: NextRequest) {
   const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
@@ -28,10 +28,14 @@ export async function GET(req: NextRequest) {
     if (!fallback) {
       return NextResponse.json({ error: 'No battle found' }, { status: 404 });
     }
-    void logServerEvent({ event_name: 'battle_viewed', battle_id: fallback.id, metadata: { ip: getClientIp(req) } });
+    void getClientGeo(req).then(geo =>
+      logServerEvent({ event_name: 'battle_viewed', battle_id: fallback.id, metadata: geo })
+    );
     return NextResponse.json(fallback);
   }
 
-  void logServerEvent({ event_name: 'battle_viewed', battle_id: data.id, metadata: { ip: getClientIp(req) } });
+  void getClientGeo(req).then(geo =>
+    logServerEvent({ event_name: 'battle_viewed', battle_id: data.id, metadata: geo })
+  );
   return NextResponse.json(data);
 }

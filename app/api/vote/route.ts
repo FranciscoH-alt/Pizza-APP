@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseServer } from '@/lib/supabase/server';
 import { logServerEvent } from '@/lib/analytics-server';
-import { getClientIp } from '@/lib/ip';
+import { getClientGeo } from '@/lib/ip';
 
 export async function POST(req: NextRequest) {
   try {
@@ -26,7 +26,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    await logServerEvent({ event_name: 'vote_cast', session_id, battle_id, metadata: { ip: getClientIp(req), selected } });
+    const geo = await getClientGeo(req);
+    await logServerEvent({ event_name: 'vote_cast', session_id, battle_id, metadata: { ...geo, selected } });
 
     // Return updated battle
     const { data: battle } = await supabaseServer
