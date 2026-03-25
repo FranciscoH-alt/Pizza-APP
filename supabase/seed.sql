@@ -7,9 +7,9 @@
 
 INSERT INTO battles (title, option_a, option_b, image_a, image_b, description, location, start_date, end_date, status, votes_a, votes_b) VALUES
 (
-  'Detroit Square vs New York Round',
-  'Detroit Square',
-  'New York Round',
+  'Square vs Round',
+  'Square',
+  'Round',
   '/pizza/square.png',
   '/pizza/round.png',
   'The ultimate Michigan vs NYC debate. Which style owns your heart?',
@@ -106,103 +106,174 @@ INSERT INTO battles (title, option_a, option_b, image_a, image_b, description, l
 );
 
 -- ============================================================
--- DEALS (real local deals — Lake Orion / Rochester Hills area)
+-- DEALS (real local deals — Lake Orion / Rochester Hills / Auburn Hills)
 -- ============================================================
 
 INSERT INTO deals (restaurant_name, title, description, area, expiration, phone, address, link, active, sort_order) VALUES
+-- Jet's Pizza
 (
   'Jet''s Pizza',
-  '$5 Off Any $25+ Order',
-  'Get $5 off any online order of $25 or more. Use code FIVE25 at checkout.',
+  'Large Popcorn Chicken Pizza',
+  'Choose from BBQ Chicken, Aloha BBQ Chicken, Buffalo Ranch Chicken, and Chicken Bacon Ranch.',
   'Lake Orion',
-  NULL,
-  NULL,
-  NULL,
-  'https://www.jetspizza.com',
-  true,
-  1
+  NULL, NULL, NULL,
+  'https://order.jetspizza.com/mi007/menu',
+  true, 1
 ),
+(
+  'Jet''s Pizza',
+  'Large Combo — $25.99',
+  'Large Pizza with Premium Mozzarella & 1 Topping, Choice of Bread, & a 2-Liter Coca-Cola Product.',
+  'Lake Orion',
+  NULL, NULL, NULL,
+  'https://order.jetspizza.com/mi007/menu',
+  true, 2
+),
+(
+  'Jet''s Pizza',
+  'Large 1-Topping Pizza — $14.99',
+  'Large Detroit-Style Pizza with Premium Mozzarella & 1 Topping.',
+  'Lake Orion',
+  NULL, NULL, NULL,
+  'https://order.jetspizza.com/mi007/menu',
+  true, 3
+),
+(
+  'Jet''s Pizza',
+  'Medium 1-Topping Pizza — $7.99',
+  'Medium Hand Tossed Pizza with Premium Mozzarella & 1 Topping.',
+  'Lake Orion',
+  NULL, NULL, NULL,
+  'https://order.jetspizza.com/mi007/menu',
+  true, 4
+),
+(
+  'Jet''s Pizza',
+  'Small 1-Topping Pizza — $10.99',
+  'Small Detroit-Style Pizza with Premium Mozzarella & 1 Topping.',
+  'Lake Orion',
+  NULL, NULL, NULL,
+  'https://order.jetspizza.com/mi007/menu',
+  true, 5
+),
+(
+  'Jet''s Pizza',
+  'Slice Combo — $6.49',
+  '2 Deep Dish slices (cheese or pepperoni) and a 20oz drink.',
+  'Lake Orion',
+  NULL, NULL, NULL,
+  'https://order.jetspizza.com/mi007/menu',
+  true, 6
+),
+-- Chicago Brothers Pizza
 (
   'Chicago Brothers Pizza',
   'Manager''s Special — $21.99',
-  '1 large pizza (cheese + 1 topping) + breadsticks + 2-liter Coke. Also: any 2 oven-baked subs for $16.99.',
+  '1 large pizza (cheese + 1 topping) + breadsticks + 2-liter Coke.',
   'Lake Orion',
-  NULL,
-  NULL,
-  NULL,
-  NULL,
-  true,
-  2
+  NULL, NULL, NULL,
+  'https://www.chicagobrotherspizza.com/event/managers-special-1699/',
+  true, 7
+),
+(
+  'Chicago Brothers Pizza',
+  'Large Hand Tossed Pizza — $13.99',
+  'Large hand tossed pizza with 1 item.',
+  'Lake Orion',
+  NULL, NULL, NULL,
+  'https://www.chicagobrotherspizza.com/event/large-hand-tossed-pizza-1-item-999-copy/',
+  true, 8
+),
+-- Hungry Howie's
+(
+  'Hungry Howie''s',
+  'Detroit Style — $12.99',
+  'Large Detroit-Style pizza.',
+  'Rochester Hills',
+  NULL, NULL, NULL,
+  'https://www.hungryhowies.com/menu/detroit-style-pizza',
+  true, 9
 ),
 (
   'Hungry Howie''s',
-  'Large Round Pizza — $7.99',
-  'Any large 1-topping round pizza, online carryout only.',
+  'Large Pepperoni Duo — $11',
+  'Large pepperoni duo pizza.',
   'Rochester Hills',
-  NULL,
-  NULL,
-  NULL,
-  'https://www.hungryhowies.com',
-  true,
-  3
+  NULL, NULL, NULL,
+  'https://www.hungryhowies.com/pepperoni-duo-pizza',
+  true, 10
 ),
 (
   'Hungry Howie''s',
-  'Detroit Style $12.99',
-  'Large 1-topping Detroit style pizza with sauce on top. Use code 29203 online.',
+  '25% Off Your Order',
+  '25% off your total order at regular menu price.',
   'Rochester Hills',
-  NULL,
-  NULL,
-  NULL,
-  'https://www.hungryhowies.com',
-  true,
-  4
+  NULL, NULL, NULL,
+  'https://hungryhowies.hungerrush.com/order/menu/10#Deals',
+  true, 11
 ),
+(
+  'Hungry Howie''s',
+  '$8.99 Large 1-Topping Pizza',
+  'Large round 1-topping pizza. Online carryout only.',
+  'Rochester Hills',
+  NULL, NULL, NULL,
+  'https://hungryhowies.hungerrush.com/order/menu/10#Deals',
+  true, 12
+),
+(
+  'Hungry Howie''s',
+  '$11.99 Large 2-Topping Pizza',
+  'Large round 2-topping pizza.',
+  'Rochester Hills',
+  NULL, NULL, NULL,
+  'https://hungryhowies.hungerrush.com/order/menu/10#Deals',
+  true, 13
+),
+(
+  'Hungry Howie''s',
+  '$7.99 Small 2-Topping Pizza',
+  'Small round 2-topping pizza.',
+  'Rochester Hills',
+  NULL, NULL, NULL,
+  'https://hungryhowies.hungerrush.com/order/menu/10#Deals',
+  true, 14
+),
+(
+  'Hungry Howie''s',
+  '$5 Howie Roll Deal',
+  'Howie Roll™ and 20oz Pepsi.',
+  'Rochester Hills',
+  NULL, NULL, NULL,
+  'https://hungryhowies.hungerrush.com/order/menu/10#Deals',
+  true, 15
+),
+-- Guido's Pizza
+(
+  'Guido''s Pizza',
+  'Lunch Special — $9.99',
+  'Baby Guido + Pop.',
+  'Auburn Hills',
+  NULL, NULL, NULL,
+  'https://www.guidospizzaauburnhills.com/view_coupon/614/Baby-Guido-Pop-9-99',
+  true, 16
+),
+(
+  'Guido''s Pizza',
+  'Old World Pepperoni L Deep Dish — $24.95',
+  'Large Deep Dish with old world style pepperoni combo.',
+  'Auburn Hills',
+  NULL, NULL, NULL,
+  'https://www.guidospizzaauburnhills.com/view_coupon/1302260/Big-G-Old-World-Style-Pepperoni-Combo-24-95',
+  true, 17
+),
+-- Little Caesars
 (
   'Little Caesars',
-  '$5 Off Any $30+ Order',
-  'Add items to cart — discount applies at checkout. Use code 5OFF30.',
+  '$5 Off Your Order of $30+',
+  'Code applied at checkout. Use code 5OFF30.',
   'Lake Orion',
-  NULL,
-  NULL,
-  NULL,
+  NULL, NULL, NULL,
   'https://littlecaesars.com/en-us/deals/',
-  true,
-  5
-),
-(
-  'Guido''s Pizza',
-  'Buy One Get One 50% Off',
-  'Buy one pizza, get a second pizza at 50% off. Use coupon code G-MSC11_1.',
-  'Lake Orion',
-  NULL,
-  NULL,
-  NULL,
-  'https://www.guidospizzaauburnhills.com/',
-  true,
-  6
-),
-(
-  'Guido''s Pizza',
-  'Lunch Special',
-  'Baby Guido (cheese + 2 toppings) + 20oz Coke. Use coupon code G-PZ20.',
-  'Lake Orion',
-  NULL,
-  NULL,
-  NULL,
-  'https://www.guidospizzaauburnhills.com/',
-  true,
-  7
-),
-(
-  'Guido''s Pizza',
-  'Old World Pepperoni XL — $17.95',
-  'XL Round, 12 slices, cheese + old world style pepperoni. Serves 3–4. Code: G-PZ78.',
-  'Lake Orion',
-  NULL,
-  NULL,
-  NULL,
-  'https://www.guidospizzaauburnhills.com/',
-  true,
-  8
+  true, 18
 );

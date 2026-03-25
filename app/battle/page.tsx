@@ -2,36 +2,46 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { MapPin, ChevronRight, Bell } from 'lucide-react';
-import type { Battle, Deal, VoteSelection, StreakData } from '@/types';
+import { ChevronLeft } from 'lucide-react';
+import type { Battle, Deal, VoteSelection } from '@/types';
 import { getVoteForBattle, getOrCreateSessionId, saveVote } from '@/lib/session';
-import { getStreak, recordDailyVote } from '@/lib/streak';
+import { recordDailyVote } from '@/lib/streak';
 import { logEvent } from '@/lib/analytics';
 import { supabase } from '@/lib/supabase/client';
 import BattleCard from '@/components/BattleCard';
 import ResultsBar from '@/components/ResultsBar';
-import ShareCard from '@/components/ShareCard';
-import Countdown from '@/components/Countdown';
 import SkeletonBattle from '@/components/SkeletonBattle';
-import StreakBadge from '@/components/StreakBadge';
+import PizzaConfetti from '@/components/PizzaConfetti';
 
-type Screen = 'battle' | 'results';
-type NotifStatus = 'idle' | 'granted' | 'denied' | 'unsupported';
+type Screen = 'battle' | 'results' | 'deal';
+
+const TAGLINES: Record<string, string[]> = {
+  round: ["You're a well-rounded person!", "Rolling with the classics!", "You're part of Team Round!", "Nice… keeping it classic!"],
+  square: ["You're not a square!", "You like a square deal!", "You're part of Team Square!", "Corners > curves. Respect."],
+  pepperoni: ["You're part of Team Pepperoni!", "Classic taste, no apologies.", "Pepperoni forever. End of debate."],
+  cheese: ["You're a purist — and we love it.", "You're part of Team Cheese!", "Less is more. You get it."],
+};
+
+function getTagline(option: string): string {
+  const key = option.toLowerCase().trim();
+  const list = TAGLINES[key] ?? [`You're part of Team ${option}!`, `${option} all the way!`, `Team ${option} for the win!`];
+  return list[Math.floor(Math.random() * list.length)];
+}
 
 export default function BattlePage() {
   const [battle, setBattle] = useState<Battle | null>(null);
   const [voted, setVoted] = useState<VoteSelection>(null);
+  const [tagline, setTagline] = useState('');
   const [screen, setScreen] = useState<Screen>('battle');
   const [voting, setVoting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [streak, setStreak] = useState<StreakData | null>(null);
-  const [newMilestone, setNewMilestone] = useState<number | null>(null);
-  const [notifStatus, setNotifStatus] = useState<NotifStatus>('idle');
   const [bounceSide, setBounceSide] = useState<'a' | 'b' | null>(null);
-  const [featuredDeal, setFeaturedDeal] = useState<Deal | null>(null);
+  const [deals, setDeals] = useState<Deal[]>([]);
+  const [shareCopied, setShareCopied] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [codeCopied, setCodeCopied] = useState(false);
 
-  // Load battle + existing vote + streak on mount
   useEffect(() => {
     async function load() {
       try {
@@ -45,13 +55,14 @@ export default function BattlePage() {
         setBattle(data);
 
         if (dealsRes.ok) {
-          const deals: Deal[] = await dealsRes.json();
-          if (deals.length > 0) setFeaturedDeal(deals[0]);
+          const allDeals: Deal[] = await dealsRes.json();
+          setDeals(allDeals);
         }
 
         const existingVote = getVoteForBattle(data.id);
         if (existingVote) {
           setVoted(existingVote);
+          setTagline(getTagline(existingVote === 'a' ? data.option_a : data.option_b));
           setScreen('results');
         }
 
@@ -65,32 +76,15 @@ export default function BattlePage() {
     }
     load();
 
-    setStreak(getStreak());
-
-    // Check notification support/permission
-    if (typeof Notification === 'undefined' || !('serviceWorker' in navigator)) {
-      setNotifStatus('unsupported');
-    } else if (Notification.permission === 'granted') {
-      setNotifStatus('granted');
-    } else if (Notification.permission === 'denied') {
-      setNotifStatus('denied');
-    }
-
     const sessionId = getOrCreateSessionId();
     logEvent({ event_name: 'app_open', session_id: sessionId, metadata: { referrer: document.referrer } });
   }, []);
 
-  // Live vote polling while on results screen
   const refreshBattle = useCallback(async () => {
     try {
       const res = await fetch('/api/battle');
-      if (res.ok) {
-        const data: Battle = await res.json();
-        setBattle(data);
-      }
-    } catch {
-      // Silent — don't disrupt UX
-    }
+      if (res.ok) setBattle(await res.json());
+    } catch { /* silent */ }
   }, []);
 
   useEffect(() => {
@@ -103,7 +97,6 @@ export default function BattlePage() {
     if (voted || voting || !battle) return;
     setVoting(true);
 
-    // Haptic + bounce
     if (navigator.vibrate) navigator.vibrate(25);
     setBounceSide(side);
     setTimeout(() => setBounceSide(null), 320);
@@ -116,24 +109,10 @@ export default function BattlePage() {
         p_session_id: sessionId,
         p_selected: side,
       });
-    } catch {
-      // Swallow — local state still advances
-    }
+    } catch { /* swallow */ }
 
     saveVote(battle.id, side);
-
-    const today = new Date().toISOString().slice(0, 10);
-    const { streak: updatedStreak, newMilestone: milestone } = recordDailyVote(today);
-    setStreak(updatedStreak);
-    if (milestone) {
-      setNewMilestone(milestone);
-      logEvent({
-        event_name: 'streak_milestone_reached',
-        session_id: sessionId,
-        battle_id: battle.id,
-        metadata: { milestone, streak: updatedStreak.current },
-      });
-    }
+    recordDailyVote(new Date().toISOString().slice(0, 10));
 
     const updated: Battle = {
       ...battle,
@@ -143,44 +122,37 @@ export default function BattlePage() {
 
     logEvent({ event_name: 'vote_cast', session_id: sessionId, battle_id: battle.id, metadata: { selected: side } });
 
+    const votedOption = side === 'a' ? battle.option_a : battle.option_b;
     setBattle(updated);
     setVoted(side);
+    setTagline(getTagline(votedOption));
     setScreen('results');
     setVoting(false);
+    setShowConfetti(true);
+    setTimeout(() => setShowConfetti(false), 2000);
 
     logEvent({ event_name: 'results_viewed', session_id: sessionId, battle_id: battle.id });
   }
 
-  async function handleEnableNotifications() {
-    if (typeof Notification === 'undefined') return;
+  async function handleShare() {
+    if (!battle) return;
+    const sessionId = getOrCreateSessionId();
+    logEvent({ event_name: 'share_initiated', session_id: sessionId, battle_id: battle.id });
 
-    const perm = await Notification.requestPermission();
-    if (perm === 'granted') {
-      setNotifStatus('granted');
-      const sessionId = getOrCreateSessionId();
-      logEvent({
-        event_name: 'notification_enabled',
-        session_id: sessionId,
-        metadata: { streak: streak?.current },
-      });
+    const votedName = voted === 'a' ? battle.option_a : voted === 'b' ? battle.option_b : null;
+    const appUrl = typeof window !== 'undefined' ? window.location.origin : 'https://thedailyslice.app';
+    const shareText = votedName
+      ? `I voted ${votedName} in today's pizza battle! 🍕\n${battle.option_a} vs ${battle.option_b}\nVote at ${appUrl}`
+      : `Today's battle: ${battle.title}\nVote at ${appUrl}`;
 
-      if ('serviceWorker' in navigator) {
-        try {
-          await navigator.serviceWorker.register('/sw.js');
-          const reg = await navigator.serviceWorker.ready;
-          const now = new Date();
-          const target = new Date(now);
-          target.setHours(18, 0, 0, 0);
-          if (target <= now) target.setDate(target.getDate() + 1);
-          const delay = target.getTime() - now.getTime();
-          reg.active?.postMessage({ type: 'SCHEDULE_REMINDER', delay });
-        } catch {
-          // SW registration not critical
-        }
-      }
-    } else {
-      setNotifStatus('denied');
+    if (navigator.share) {
+      try { await navigator.share({ text: shareText, url: appUrl }); return; } catch { /* dismissed */ }
     }
+    try {
+      await navigator.clipboard.writeText(shareText);
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2000);
+    } catch { /* ignore */ }
   }
 
   if (loading) return <SkeletonBattle />;
@@ -195,64 +167,70 @@ export default function BattlePage() {
     );
   }
 
-  const aIsLeading = battle.votes_a >= battle.votes_b;
-  const totalVotes = battle.votes_a + battle.votes_b;
+  function pickDeal(vote: VoteSelection): Deal | null {
+    if (!vote || deals.length === 0) return null;
+    const optionName = (vote === 'a' ? battle!.option_a : battle!.option_b).toLowerCase().trim();
+
+    // Curated deal title lists per style — rotates daily
+    const STYLE_DEALS: Record<string, string[]> = {
+      square: [
+        'Large 1-Topping Pizza — $14.99',       // Jet's Detroit-Style
+        'Detroit Style — $12.99',                // Hungry Howie's
+        'Old World Pepperoni L Deep Dish — $24.95', // Guido's
+        'Small 1-Topping Pizza — $10.99',        // Jet's Detroit-Style small
+        'Slice Combo — $6.49',                   // Jet's deep dish slices
+      ],
+      round: [
+        'Large Hand Tossed Pizza — $13.99',      // Chicago Brothers
+        '$8.99 Large 1-Topping Pizza',           // Hungry Howie's round
+        'Medium 1-Topping Pizza — $7.99',        // Jet's hand tossed
+        '$11.99 Large 2-Topping Pizza',          // Hungry Howie's round
+        '$7.99 Small 2-Topping Pizza',           // Hungry Howie's round
+      ],
+      pepperoni: ['Large Pepperoni Duo — $11', 'Old World Pepperoni L Deep Dish — $24.95'],
+      cheese: ['Large Combo — $25.99', 'Manager\'s Special — $21.99'],
+    };
+
+    const titleList = STYLE_DEALS[optionName];
+    if (titleList?.length) {
+      const dayIndex = Math.floor(Date.now() / (1000 * 60 * 60 * 24));
+      const targetTitle = titleList[dayIndex % titleList.length];
+      const found = deals.find(d => d.title === targetTitle);
+      if (found) return found;
+    }
+
+    // Fallback: keyword match across title + description
+    const KEYWORD_MAP: Record<string, string[]> = {
+      square: ['detroit', 'deep dish', 'square'],
+      round: ['round', 'hand tossed'],
+      pepperoni: ['pepperoni'],
+      cheese: ['cheese'],
+    };
+    const searchTerms = KEYWORD_MAP[optionName] ?? optionName.split(/\s+/);
+    return deals.find(d =>
+      searchTerms.some(kw => d.title.toLowerCase().includes(kw) || d.description?.toLowerCase().includes(kw))
+    ) ?? deals[0];
+  }
+
+  const featuredDeal = pickDeal(voted);
+  const promoCode = featuredDeal?.description?.match(/(?:use\s+)?code[:\s]+([A-Z0-9_-]+)/i)?.[1] ?? null;
 
   return (
     <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
-      {/* Header */}
-      <header style={{ padding: '20px 20px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div>
-          <h1 style={{ fontFamily: 'var(--font-playfair, "Playfair Display", serif)', fontWeight: 700, fontSize: '1.5rem', margin: '0 0 2px', color: '#1C1C1C', letterSpacing: '-0.02em' }}>
-            The Daily Slice
-          </h1>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8125rem', color: '#8A7A6A' }}>
-            <MapPin size={12} />
-            {battle.location}
-          </span>
-          <p style={{ margin: '2px 0 0', fontSize: '0.75rem', color: '#8A7A6A', fontStyle: 'italic' }}>
-            Vote daily. Decide the best pizza in your city.
-          </p>
-        </div>
-        <Countdown />
-      </header>
+      {showConfetti && <PizzaConfetti />}
 
-      {/* Main content */}
-      <main style={{ flex: 1, padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        {screen === 'battle' ? (
-          <>
-            {/* Battle title */}
-            <div className="animate-fade-up" style={{ textAlign: 'center' }}>
-              {/* Pre-vote streak badge */}
-              {streak && streak.current >= 1 && (
-                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>
-                  <StreakBadge streak={streak.current} />
-                </div>
-              )}
-              <span className="badge badge-tomato" style={{ marginBottom: '10px' }}>Today&apos;s Battle</span>
-              <h2 style={{ fontFamily: 'var(--font-playfair, "Playfair Display", serif)', fontWeight: 700, fontSize: '1.375rem', color: '#1C1C1C', margin: 0, letterSpacing: '-0.02em', lineHeight: 1.25 }}>
-                {battle.title}
+      <main style={{ flex: 1, padding: 'clamp(24px, 4vh, 56px) clamp(16px, 4vw, 48px)', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '28px', minHeight: 0 }}>
+
+        {/* ── SCREEN 1: Battle ── */}
+        {screen === 'battle' && (
+          <div className="animate-fade-up" style={{ display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'space-evenly' }}>
+            <div style={{ textAlign: 'center', padding: '0 8px' }}>
+              <h2 style={{ fontFamily: 'var(--font-playfair, "Playfair Display", serif)', fontWeight: 700, fontSize: 'clamp(2.5rem, 6vw, 4rem)', color: '#1C1C1C', margin: 0, letterSpacing: '-0.02em', lineHeight: 1.15 }}>
+                Which style owns your heart?
               </h2>
-              {battle.description && (
-                <p style={{ margin: '8px 0 0', fontSize: '0.875rem', color: '#8A7A6A', lineHeight: 1.5 }}>
-                  {battle.description}
-                </p>
-              )}
-              {/* Social proof */}
-              {totalVotes > 0 && (
-                <p style={{ fontSize: '0.8125rem', color: '#D93025', fontWeight: 700, margin: '6px 0 0' }}>
-                  🔥 {totalVotes.toLocaleString()} {totalVotes === 1 ? 'person' : 'people'} voted today
-                </p>
-              )}
             </div>
 
-            {/* Tap-to-vote instruction */}
-            <p className="animate-fade-up delay-50" style={{ textAlign: 'center', margin: '-8px 0', fontSize: '0.8125rem', color: '#8A7A6A', fontWeight: 600, letterSpacing: '0.02em', textTransform: 'uppercase' }}>
-              Tap your pick
-            </p>
-
-            {/* Battle cards */}
-            <div className="animate-fade-up delay-100" style={{ display: 'flex', gap: '12px', alignItems: 'stretch' }}>
+            <div className="animate-fade-up delay-100" style={{ display: 'flex', gap: 'clamp(12px, 2vw, 24px)', alignItems: 'stretch' }}>
               <BattleCard
                 name={battle.option_a}
                 image={battle.image_a}
@@ -261,7 +239,7 @@ export default function BattlePage() {
                 disabled={voting}
                 bounce={bounceSide === 'a'}
               />
-              <div style={{ display: 'flex', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0, width: 'clamp(44px, 6vw, 64px)' }}>
                 <span className="vs-divider">VS</span>
               </div>
               <BattleCard
@@ -273,134 +251,107 @@ export default function BattlePage() {
                 bounce={bounceSide === 'b'}
               />
             </div>
-          </>
-        ) : (
-          <div className="animate-slide-in">
-            {/* Results header */}
-            <div style={{ textAlign: 'center', marginBottom: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-              <span className="badge badge-basil">You voted!</span>
-              {streak && streak.current >= 1 && (
-                <StreakBadge streak={streak.current} isMilestone={!!newMilestone} />
-              )}
-              {newMilestone && (
-                <div
-                  className="animate-milestone"
-                  style={{ fontSize: '0.875rem', fontWeight: 700, color: '#C07800', padding: '6px 14px', background: '#FFF0C8', borderRadius: 9999, border: '1px solid rgba(232,160,32,0.4)' }}
-                >
-                  🎉 {newMilestone}-day milestone unlocked!
-                </div>
-              )}
-              <h2 style={{ fontFamily: 'var(--font-playfair, "Playfair Display", serif)', fontWeight: 700, fontSize: '1.375rem', color: '#1C1C1C', margin: 0, letterSpacing: '-0.02em' }}>
-                {battle.title}
+          </div>
+        )}
+
+        {/* ── SCREEN 2: Results ── */}
+        {screen === 'results' && (
+          <div className="animate-slide-in" style={{ display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'space-evenly' }}>
+            <div style={{ textAlign: 'center', padding: '0 8px' }}>
+              <h2 style={{ fontFamily: 'var(--font-playfair, "Playfair Display", serif)', fontWeight: 700, fontSize: 'clamp(2.5rem, 6vw, 4rem)', color: '#1C1C1C', margin: 0, letterSpacing: '-0.02em', lineHeight: 1.15 }}>
+                {tagline}
               </h2>
             </div>
 
-            {/* Voted cards with leading glow */}
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'stretch', marginBottom: '16px' }}>
-              <BattleCard
-                name={battle.option_a}
-                image={battle.image_a}
-                side="a"
-                selected={voted === 'a'}
-                dimmed={voted === 'b'}
-                disabled
-                isLeading={aIsLeading}
-              />
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <span className="vs-divider">VS</span>
-              </div>
-              <BattleCard
-                name={battle.option_b}
-                image={battle.image_b}
-                side="b"
-                selected={voted === 'b'}
-                dimmed={voted === 'a'}
-                disabled
-                isLeading={!aIsLeading}
-              />
+            <div style={{ background: '#FFFFFF', borderRadius: 24, padding: '20px', boxShadow: '0 2px 16px rgba(28,28,28,0.08)' }}>
+              <ResultsBar battle={battle} voted={voted} hideTagline />
             </div>
 
-            {/* Results bar */}
-            <div className="card" style={{ padding: '20px', marginBottom: '16px' }}>
-              <ResultsBar battle={battle} voted={voted} />
-            </div>
-
-            {/* Featured deal card */}
-            {featuredDeal && (
-              <Link
-                href="/deals"
-                style={{ display: 'block', background: '#FFFFFF', borderRadius: 14, padding: '14px 16px', marginBottom: '16px', boxShadow: '0 2px 12px rgba(28,28,28,0.10)', textDecoration: 'none' }}
-                onClick={() => logEvent({ event_name: 'deal_clicked', session_id: getOrCreateSessionId(), deal_id: featuredDeal.id, metadata: { cta_type: 'order', restaurant: featuredDeal.restaurant_name, source: 'battle_results' } })}
+            <div style={{ display: 'flex', flexDirection: 'row', gap: '10px' }}>
+              <button
+                onClick={() => {
+                  setScreen('deal');
+                  if (featuredDeal) logEvent({ event_name: 'deal_clicked', session_id: getOrCreateSessionId(), deal_id: featuredDeal.id, metadata: { cta_type: 'reveal', restaurant: featuredDeal.restaurant_name, source: 'battle_results' } });
+                }}
+                style={{ flex: 1, background: '#D93025', color: '#FFF8E7', border: 'none', borderRadius: '20px', padding: '22px 12px', fontWeight: 800, fontSize: 'clamp(0.9375rem, 2.4vw, 1.125rem)', cursor: 'pointer', letterSpacing: '0.04em', WebkitTapHighlightColor: 'transparent', textAlign: 'center', lineHeight: 1.25 }}
               >
-                <p style={{ margin: 0, fontSize: '0.6875rem', fontWeight: 700, color: '#8A7A6A', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                  Featured Deal
-                </p>
-                <p style={{ margin: '3px 0 0', fontFamily: 'var(--font-playfair, "Playfair Display", serif)', fontWeight: 700, fontSize: '1rem', color: '#D93025' }}>
-                  {featuredDeal.restaurant_name}
-                </p>
-                <p style={{ margin: '2px 0 0', fontSize: '0.875rem', color: '#3A3A3A' }}>
-                  {featuredDeal.title}
-                </p>
-                <p style={{ margin: '6px 0 0', fontSize: '0.75rem', fontWeight: 600, color: '#D93025' }}>
-                  See all deals →
-                </p>
-              </Link>
-            )}
+                DEAL FOR YOUR STYLE
+              </button>
 
-            {/* Come back tomorrow + notification CTA */}
-            <div style={{ background: '#F2E8D0', borderRadius: 14, padding: '16px 20px', marginBottom: '16px', textAlign: 'center' }}>
-              <p style={{ fontFamily: 'var(--font-playfair, "Playfair Display", serif)', fontWeight: 700, fontSize: '1rem', color: '#1C1C1C', margin: '0 0 8px' }}>
-                New battle at midnight 🍕
-              </p>
-              <Countdown />
-              <p style={{ fontSize: '0.8125rem', color: '#8A7A6A', margin: '8px 0 12px' }}>
-                Come back tomorrow to keep your streak alive
-              </p>
-              {notifStatus === 'idle' && (
-                <button
-                  onClick={handleEnableNotifications}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#1C1C1C', color: '#FFF8E7', border: 'none', borderRadius: 9999, padding: '10px 18px', fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer' }}
-                >
-                  <Bell size={14} />
-                  Remind me at 6pm
-                </button>
-              )}
-              {notifStatus === 'granted' && (
-                <p style={{ fontSize: '0.875rem', fontWeight: 600, color: '#2D6A4F', margin: 0 }}>
-                  ✓ Reminder set for 6pm
-                </p>
-              )}
-              {notifStatus === 'denied' && (
-                <p style={{ fontSize: '0.8125rem', color: '#8A7A6A', margin: 0 }}>
-                  Enable notifications in your browser settings
-                </p>
-              )}
+              <button
+                onClick={handleShare}
+                style={{ flex: 1, background: '#1C1C1C', color: '#FFF8E7', border: 'none', borderRadius: '20px', padding: '22px 12px', fontWeight: 800, fontSize: 'clamp(0.9375rem, 2.4vw, 1.125rem)', cursor: 'pointer', letterSpacing: '0.04em', WebkitTapHighlightColor: 'transparent', textAlign: 'center', lineHeight: 1.25 }}
+              >
+                {shareCopied ? '✓ LINK COPIED!' : 'SHARE YOUR PICK'}
+              </button>
             </div>
-
-            {/* Share card */}
-            <ShareCard
-              battle={battle}
-              voted={voted}
-              onShare={() => {
-                const sessionId = getOrCreateSessionId();
-                logEvent({ event_name: 'share_initiated', session_id: sessionId, battle_id: battle.id });
-              }}
-            />
           </div>
         )}
-      </main>
 
-      {/* Footer */}
-      <footer style={{ padding: '16px 20px 24px', borderTop: '1px solid #E0D4B8', background: '#FFF8E7' }}>
-        <Link
-          href="/deals"
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', color: '#D93025', fontWeight: 700, fontSize: '0.9375rem', textDecoration: 'none' }}
-          onClick={() => logEvent({ event_name: 'deals_viewed', session_id: getOrCreateSessionId() })}
-        >
-          See Today&apos;s Deals
-          <ChevronRight size={16} />
-        </Link>
-      </footer>
+        {/* ── SCREEN 3: Deal ── */}
+        {screen === 'deal' && featuredDeal && (
+          <div className="animate-slide-in" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {/* Back */}
+            <button
+              onClick={() => setScreen('results')}
+              style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: '#8A7A6A', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer', padding: 0, alignSelf: 'flex-start' }}
+            >
+              <ChevronLeft size={16} />
+              Your results
+            </button>
+
+            {/* Deal card */}
+            <div style={{ background: '#FFFFFF', borderRadius: 16, overflow: 'hidden', boxShadow: '0 2px 20px rgba(28,28,28,0.10)' }}>
+              <div style={{ background: '#D93025', padding: '16px 20px' }}>
+                <p style={{ margin: 0, fontSize: '0.625rem', fontWeight: 700, color: 'rgba(255,248,231,0.7)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Your style deal</p>
+                <p style={{ margin: '4px 0 0', fontFamily: 'var(--font-playfair, "Playfair Display", serif)', fontWeight: 700, fontSize: '1.5rem', color: '#FFF8E7', lineHeight: 1.2 }}>{featuredDeal.restaurant_name}</p>
+              </div>
+
+              <div style={{ padding: '16px 20px 20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div>
+                  <p style={{ margin: 0, fontSize: '1.0625rem', fontWeight: 700, color: '#1C1C1C', lineHeight: 1.3 }}>{featuredDeal.title}</p>
+                  {featuredDeal.description && (
+                    <p style={{ margin: '6px 0 0', fontSize: '0.875rem', color: '#8A7A6A', lineHeight: 1.5 }}>{featuredDeal.description}</p>
+                  )}
+                </div>
+
+                {promoCode && (
+                  <div style={{ background: '#F2E8D0', borderRadius: 10, padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                      <p style={{ margin: 0, fontSize: '0.625rem', fontWeight: 700, color: '#8A7A6A', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Promo code</p>
+                      <p style={{ margin: '2px 0 0', fontFamily: 'var(--font-ibm-mono, monospace)', fontWeight: 700, fontSize: '1.25rem', color: '#1C1C1C', letterSpacing: '0.1em' }}>{promoCode}</p>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        await navigator.clipboard.writeText(promoCode);
+                        setCodeCopied(true);
+                        setTimeout(() => setCodeCopied(false), 2000);
+                        logEvent({ event_name: 'deal_clicked', session_id: getOrCreateSessionId(), deal_id: featuredDeal.id, metadata: { cta_type: 'copy_code', restaurant: featuredDeal.restaurant_name, source: 'deal_screen' } });
+                      }}
+                      style={{ background: codeCopied ? '#2D6A4F' : '#1C1C1C', color: '#FFF8E7', border: 'none', borderRadius: 9999, padding: '8px 18px', fontWeight: 700, fontSize: '0.8125rem', cursor: 'pointer', transition: 'background 0.2s', letterSpacing: '0.02em', whiteSpace: 'nowrap' }}
+                    >
+                      {codeCopied ? '✓ Copied!' : 'Copy'}
+                    </button>
+                  </div>
+                )}
+
+                {featuredDeal.link && (
+                  <a
+                    href={featuredDeal.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ display: 'block', background: '#D93025', color: '#FFF8E7', borderRadius: 9999, padding: '15px 0', fontWeight: 700, fontSize: '0.9375rem', textAlign: 'center', textDecoration: 'none', letterSpacing: '0.04em' }}
+                    onClick={() => logEvent({ event_name: 'deal_clicked', session_id: getOrCreateSessionId(), deal_id: featuredDeal.id, metadata: { cta_type: 'order', restaurant: featuredDeal.restaurant_name, source: 'deal_screen' } })}
+                  >
+                    Order Now →
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+      </main>
     </div>
   );
 }

@@ -2,23 +2,52 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Tag } from 'lucide-react';
-import type { Deal } from '@/types';
-import { getOrCreateSessionId } from '@/lib/session';
+import { ArrowLeft, MapPin, Tag } from 'lucide-react';
+import type { Deal, Battle } from '@/types';
+import { getOrCreateSessionId, getVoteForBattle } from '@/lib/session';
 import { logEvent } from '@/lib/analytics';
 import DealCard from '@/components/DealCard';
 
+// Build keyword list from the voted option name, with style synonyms
+function getStyleKeywords(optionName: string): string[] {
+  const name = optionName.toLowerCase();
+  const words = name.split(/\s+/).filter((w) => w.length > 2);
+  if (name.includes('detroit') || name.includes('square')) {
+    words.push('deep dish', 'detroit');
+  }
+  if (name.includes('round') || name.includes('new york')) {
+    words.push('round', 'hand tossed');
+  }
+  if (name.includes('pepperoni')) words.push('pepperoni');
+  if (name.includes('cheese')) words.push('cheese', 'mozzarella');
+  if (name.includes('thin')) words.push('thin');
+  if (name.includes('deep') || name.includes('dish')) words.push('deep dish');
+  return [...new Set(words)];
+}
+
+function dealMatchesStyle(deal: Deal, keywords: string[]): boolean {
+  const text = `${deal.title} ${deal.description ?? ''}`.toLowerCase();
+  return keywords.some((kw) => text.includes(kw));
+}
+
 export default function DealsPage() {
   const [deals, setDeals] = useState<Deal[]>([]);
+  const [battle, setBattle] = useState<Battle | null>(null);
+  const [userVote, setUserVote] = useState<'a' | 'b' | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch('/api/deals');
-        if (res.ok) {
-          const data: Deal[] = await res.json();
-          setDeals(data);
+        const [dealsRes, battleRes] = await Promise.all([
+          fetch('/api/deals'),
+          fetch('/api/battle'),
+        ]);
+        if (dealsRes.ok) setDeals(await dealsRes.json());
+        if (battleRes.ok) {
+          const battleData: Battle = await battleRes.json();
+          setBattle(battleData);
+          setUserVote(getVoteForBattle(battleData.id));
         }
       } finally {
         setLoading(false);
@@ -39,6 +68,39 @@ export default function DealsPage() {
       metadata: { cta_type: ctaType, restaurant: deal.restaurant_name },
     });
   }
+
+  // Personalization
+  const votedOption =
+    userVote && battle ? (userVote === 'a' ? battle.option_a : battle.option_b) : null;
+  const styleKeywords = votedOption ? getStyleKeywords(votedOption) : [];
+
+  // Group deals by restaurant, sort matching restaurants + deals first
+  const groups = (() => {
+    const grouped = deals.reduce<Record<string, Deal[]>>((acc, deal) => {
+      (acc[deal.restaurant_name] ??= []).push(deal);
+      return acc;
+    }, {});
+
+    return Object.entries(grouped)
+      .map(([restaurant, restaurantDeals]) => {
+        const sorted =
+          styleKeywords.length > 0
+            ? [
+                ...restaurantDeals.filter((d) => dealMatchesStyle(d, styleKeywords)),
+                ...restaurantDeals.filter((d) => !dealMatchesStyle(d, styleKeywords)),
+              ]
+            : restaurantDeals;
+        const hasMatch =
+          styleKeywords.length > 0 &&
+          restaurantDeals.some((d) => dealMatchesStyle(d, styleKeywords));
+        return { restaurant, deals: sorted, hasMatch, area: restaurantDeals[0].area };
+      })
+      .sort((a, b) => {
+        if (a.hasMatch && !b.hasMatch) return -1;
+        if (!a.hasMatch && b.hasMatch) return 1;
+        return 0;
+      });
+  })();
 
   return (
     <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
@@ -81,12 +143,31 @@ export default function DealsPage() {
           </h1>
         </div>
         <p style={{ margin: 0, fontSize: '0.8125rem', color: '#8A7A6A', paddingLeft: '32px' }}>
-          Lake Orion &amp; Rochester Hills
+          Lake Orion · Rochester Hills · Auburn Hills
         </p>
       </header>
 
+      {/* Personalization banner — shown after voting */}
+      {votedOption && (
+        <div
+          style={{
+            background: '#D93025',
+            color: '#FFF8E7',
+            padding: '10px 20px',
+            fontSize: '0.8125rem',
+            fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+          }}
+        >
+          <span>🍕</span>
+          <span>Deals picked for {votedOption} fans</span>
+        </div>
+      )}
+
       {/* Content */}
-      <main style={{ flex: 1, padding: '16px 20px 32px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      <main style={{ flex: 1, padding: '16px 20px 32px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
         {loading ? (
           <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '40px' }}>
             <div
@@ -114,16 +195,86 @@ export default function DealsPage() {
           >
             <Tag size={36} color="#E0D4B8" />
             <p style={{ fontWeight: 600, color: '#3A3A3A', margin: 0 }}>No deals today</p>
-            <p style={{ color: '#8A7A6A', fontSize: '0.875rem', margin: 0 }}>Check back tomorrow for fresh deals.</p>
+            <p style={{ color: '#8A7A6A', fontSize: '0.875rem', margin: 0 }}>
+              Check back tomorrow for fresh deals.
+            </p>
           </div>
         ) : (
-          deals.map((deal, i) => (
+          groups.map(({ restaurant, deals: restaurantDeals, hasMatch, area }, groupIndex) => (
             <div
-              key={deal.id}
+              key={restaurant}
               className="animate-fade-up"
-              style={{ animationDelay: `${i * 0.05}s` }}
+              style={{ animationDelay: `${groupIndex * 0.07}s` }}
             >
-              <DealCard deal={deal} onCTAClick={handleDealClick} />
+              {/* Restaurant section header */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'baseline',
+                  gap: '8px',
+                  marginBottom: '8px',
+                  paddingBottom: '6px',
+                  borderBottom: `2px solid ${hasMatch ? '#E8A020' : '#E0D4B8'}`,
+                }}
+              >
+                <h2
+                  style={{
+                    fontFamily: 'var(--font-playfair, "Playfair Display", serif)',
+                    fontWeight: 700,
+                    fontSize: '1.125rem',
+                    color: '#1C1C1C',
+                    margin: 0,
+                  }}
+                >
+                  {restaurant}
+                </h2>
+                {area && (
+                  <span
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '3px',
+                      fontSize: '0.75rem',
+                      color: '#8A7A6A',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    <MapPin size={10} />
+                    {area}
+                  </span>
+                )}
+                {hasMatch && (
+                  <span
+                    style={{
+                      marginLeft: 'auto',
+                      fontSize: '0.6563rem',
+                      fontWeight: 700,
+                      color: '#C07800',
+                      background: '#FFF3D0',
+                      border: '1px solid #E8A020',
+                      borderRadius: '4px',
+                      padding: '2px 7px',
+                      whiteSpace: 'nowrap',
+                      flexShrink: 0,
+                    }}
+                  >
+                    Matches your pick
+                  </span>
+                )}
+              </div>
+
+              {/* Deal cards for this restaurant */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {restaurantDeals.map((deal) => (
+                  <DealCard
+                    key={deal.id}
+                    deal={deal}
+                    showRestaurant={false}
+                    highlight={styleKeywords.length > 0 && dealMatchesStyle(deal, styleKeywords)}
+                    onCTAClick={handleDealClick}
+                  />
+                ))}
+              </div>
             </div>
           ))
         )}

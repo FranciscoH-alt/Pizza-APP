@@ -11,9 +11,11 @@ interface BattleCardProps {
   disabled?: boolean;
   isLeading?: boolean;
   bounce?: boolean;
+  compact?: boolean;
+  fillHeight?: boolean;
 }
 
-export default function BattleCard({ name, image, side, onClick, selected, dimmed, disabled, isLeading, bounce }: BattleCardProps) {
+export default function BattleCard({ name, image, side, onClick, selected, dimmed, disabled, isLeading, bounce, compact, fillHeight }: BattleCardProps) {
   const accentColor = side === 'a' ? '#D93025' : '#1C1C1C';
   const fallbackGradient =
     side === 'a'
@@ -27,6 +29,7 @@ export default function BattleCard({ name, image, side, onClick, selected, dimme
       className={bounce ? 'animate-vote-bounce' : undefined}
       style={{
         flex: 1,
+        height: fillHeight ? '100%' : undefined,
         background: 'none',
         border: 'none',
         padding: 0,
@@ -36,8 +39,8 @@ export default function BattleCard({ name, image, side, onClick, selected, dimme
         WebkitTapHighlightColor: 'transparent',
         // Selected: colored border ring
         outline: selected ? `3px solid ${accentColor}` : '3px solid transparent',
-        outlineOffset: '2px',
-        transform: selected ? 'scale(1.03)' : dimmed ? 'scale(0.97)' : 'scale(1)',
+        outlineOffset: '0px',
+        transform: selected ? 'scale(1.01)' : dimmed ? 'scale(0.98)' : 'scale(1)',
         opacity: dimmed ? 0.45 : 1,
         transition: bounce ? 'none' : 'transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease, outline-color 0.15s ease',
       }}
@@ -47,6 +50,7 @@ export default function BattleCard({ name, image, side, onClick, selected, dimme
         style={{
           borderRadius: '14px',
           overflow: 'hidden',
+          height: fillHeight ? '100%' : undefined,
           background: '#FFFFFF',
           boxShadow: selected
             ? `0 6px 24px ${accentColor}40`
@@ -59,7 +63,7 @@ export default function BattleCard({ name, image, side, onClick, selected, dimme
         <div
           style={{
             position: 'relative',
-            height: '200px',
+            height: fillHeight ? '100%' : compact ? '260px' : 'clamp(340px, 58vh, 620px)',
             background: fallbackGradient,
             overflow: 'hidden',
           }}
@@ -88,56 +92,73 @@ export default function BattleCard({ name, image, side, onClick, selected, dimme
             </div>
           )}
 
-          {/* Bottom gradient for name readability */}
+          {/* Top gradient for name readability */}
           <div
             style={{
               position: 'absolute',
-              bottom: 0,
+              top: 0,
               left: 0,
               right: 0,
-              height: '80px',
-              background: 'linear-gradient(to top, rgba(0,0,0,0.72), transparent)',
+              height: '140px',
+              background: 'linear-gradient(to bottom, rgba(0,0,0,0.80), transparent)',
             }}
           />
 
-          {/* Name overlay */}
+          {/* Name overlay — top */}
           <div
             style={{
               position: 'absolute',
-              bottom: 0,
+              top: 0,
               left: 0,
               right: 0,
-              padding: '10px 12px',
+              padding: '16px 16px',
             }}
           >
             <p
               style={{
                 fontFamily: 'var(--font-playfair, "Playfair Display", Georgia, serif)',
                 fontWeight: 700,
-                fontSize: '0.9375rem',
+                fontSize: 'clamp(1.75rem, 5vw, 2.75rem)',
                 color: '#FFFFFF',
                 margin: 0,
                 lineHeight: 1.2,
-                textShadow: '0 1px 3px rgba(0,0,0,0.4)',
+                textShadow: '0 1px 4px rgba(0,0,0,0.5)',
               }}
             >
               {name}
             </p>
-            {!selected && !dimmed && (
-              <p
+          </div>
+
+          {/* TAP TO VOTE badge — bottom center */}
+          {!selected && !dimmed && (
+            <div
+              style={{
+                position: 'absolute',
+                bottom: '14px',
+                left: 0,
+                right: 0,
+                display: 'flex',
+                justifyContent: 'center',
+              }}
+            >
+              <span
                 style={{
-                  margin: '3px 0 0',
-                  fontSize: '0.6875rem',
-                  color: 'rgba(255,255,255,0.75)',
-                  fontWeight: 600,
-                  letterSpacing: '0.04em',
+                  background: 'rgba(0,0,0,0.72)',
+                  color: '#FFFFFF',
+                  fontWeight: 800,
+                  fontSize: 'clamp(0.875rem, 2.2vw, 1.125rem)',
+                  letterSpacing: '0.1em',
                   textTransform: 'uppercase',
+                  padding: '6px 14px',
+                  borderRadius: 9999,
+                  backdropFilter: 'blur(4px)',
+                  WebkitBackdropFilter: 'blur(4px)',
                 }}
               >
                 Tap to vote
-              </p>
-            )}
-          </div>
+              </span>
+            </div>
+          )}
 
           {/* Selected checkmark badge */}
           {selected && (

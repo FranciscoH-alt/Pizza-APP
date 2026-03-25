@@ -7,6 +7,8 @@ import type { Deal } from '@/types';
 interface DealCardProps {
   deal: Deal;
   onCTAClick?: (deal: Deal, ctaType: 'call' | 'directions' | 'order') => void;
+  showRestaurant?: boolean;
+  highlight?: boolean;
 }
 
 // Extract coupon code from description text
@@ -72,7 +74,7 @@ function CouponBadge({ code }: { code: string }) {
   );
 }
 
-export default function DealCard({ deal, onCTAClick }: DealCardProps) {
+export default function DealCard({ deal, onCTAClick, showRestaurant = true, highlight = false }: DealCardProps) {
   const couponCode = extractCouponCode(deal.description);
 
   // Strip "Use code XXXX" from description so code only appears in the badge
@@ -85,32 +87,47 @@ export default function DealCard({ deal, onCTAClick }: DealCardProps) {
     : null;
 
   return (
-    <div className="card" style={{ padding: '18px' }}>
-      {/* Header row */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-        <div>
-          <p style={{ fontFamily: 'var(--font-playfair, "Playfair Display", serif)', fontWeight: 700, fontSize: '1rem', color: '#1C1C1C', margin: '0 0 2px' }}>
-            {deal.restaurant_name}
-          </p>
-          {deal.area && (
-            <span style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '0.75rem', color: '#8A7A6A' }}>
-              <MapPin size={11} />
-              {deal.area}
+    <div
+      className="card"
+      style={{
+        padding: '18px',
+        borderLeft: highlight ? '3px solid #E8A020' : undefined,
+      }}
+    >
+      {/* Header row — only shown when not grouped */}
+      {showRestaurant && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+          <div>
+            <p style={{ fontFamily: 'var(--font-playfair, "Playfair Display", serif)', fontWeight: 700, fontSize: '1rem', color: '#1C1C1C', margin: '0 0 2px' }}>
+              {deal.restaurant_name}
+            </p>
+            {deal.area && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '0.75rem', color: '#8A7A6A' }}>
+                <MapPin size={11} />
+                {deal.area}
+              </span>
+            )}
+          </div>
+          {deal.expiration && (
+            <span className="badge badge-gold">
+              <Tag size={9} />
+              {deal.expiration}
             </span>
           )}
         </div>
-        {deal.expiration && (
-          <span className="badge badge-gold">
-            <Tag size={9} />
-            {deal.expiration}
+      )}
+
+      {/* Deal title */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px', marginBottom: '6px' }}>
+        <p style={{ fontWeight: 700, fontSize: showRestaurant ? '1.0625rem' : '0.9375rem', color: '#D93025', margin: 0, flex: 1 }}>
+          {deal.title}
+        </p>
+        {highlight && (
+          <span style={{ fontSize: '0.6563rem', fontWeight: 700, color: '#C07800', background: '#FFF3D0', border: '1px solid #E8A020', borderRadius: '4px', padding: '2px 6px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+            Your pick
           </span>
         )}
       </div>
-
-      {/* Deal title */}
-      <p style={{ fontWeight: 700, fontSize: '1.0625rem', color: '#D93025', margin: '0 0 8px' }}>
-        {deal.title}
-      </p>
 
       {/* Description (cleaned — code stripped out) */}
       {cleanDescription && (
