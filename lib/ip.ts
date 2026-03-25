@@ -27,20 +27,21 @@ export async function getClientGeo(req: NextRequest): Promise<GeoData> {
     return { ip, city, region, country };
   }
 
-  // Fallback for local dev / non-Vercel: lookup via ipapi.co (free, no key, 1k/day)
+  // Fallback for local dev / non-Vercel: ip-api.com (free, no key, 45 req/min)
   const isLoopback = !ip || ip === '::1' || ip === '127.0.0.1';
   if (!isLoopback) {
     try {
-      const res = await fetch(`https://ipapi.co/${ip}/json/`, {
-        signal: AbortSignal.timeout(2000),
-      });
+      const res = await fetch(
+        `http://ip-api.com/json/${ip}?fields=city,regionName,country`,
+        { signal: AbortSignal.timeout(2000) }
+      );
       if (res.ok) {
         const data = await res.json();
         return {
           ip,
           city: data.city ?? null,
-          region: data.region ?? null,
-          country: data.country_name ?? null,
+          region: data.regionName ?? null,
+          country: data.country ?? null,
         };
       }
     } catch {
