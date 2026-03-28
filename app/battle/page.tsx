@@ -13,7 +13,7 @@ import ResultsBar from '@/components/ResultsBar';
 import SkeletonBattle from '@/components/SkeletonBattle';
 import PizzaConfetti from '@/components/PizzaConfetti';
 
-type Screen = 'battle' | 'results' | 'deal';
+type Screen = 'battle' | 'results' | 'promo' | 'deal';
 
 const TAGLINES: Record<string, string[]> = {
   round: ["You're a well-rounded person!", "Rolling with the classics!", "You're part of Team Round!", "Nice… keeping it classic!"],
@@ -40,7 +40,10 @@ export default function BattlePage() {
   const [deals, setDeals] = useState<Deal[]>([]);
   const [shareCopied, setShareCopied] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
-  const [codeCopied, setCodeCopied] = useState(false);
+  const [featuredCodeCopied, setFeaturedCodeCopied] = useState(false);
+  const [promoLocation, setPromoLocation] = useState<'guidos' | 'jets' | null>(null);
+  const [generatedPromoCode, setGeneratedPromoCode] = useState<string | null>(null);
+  const [promoCopied, setPromoCopied] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -167,6 +170,12 @@ export default function BattlePage() {
     );
   }
 
+  function generatePromoCode(location: 'guidos' | 'jets'): string {
+    const prefix = location === 'guidos' ? 'GUIDO' : 'JETS';
+    const suffix = Math.random().toString(36).slice(2, 6).toUpperCase();
+    return `${prefix}-${suffix}`;
+  }
+
   function pickDeal(vote: VoteSelection): Deal | null {
     if (!vote || deals.length === 0) return null;
     const optionName = (vote === 'a' ? battle!.option_a : battle!.option_b).toLowerCase().trim();
@@ -213,7 +222,7 @@ export default function BattlePage() {
   }
 
   const featuredDeal = pickDeal(voted);
-  const promoCode = featuredDeal?.description?.match(/(?:use\s+)?code[:\s]+([A-Z0-9_-]+)/i)?.[1] ?? null;
+  const featuredPromoCode = featuredDeal?.description?.match(/(?:use\s+)?code[:\s]+([A-Z0-9_-]+)/i)?.[1] ?? null;
 
   return (
     <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
@@ -270,7 +279,7 @@ export default function BattlePage() {
             <div style={{ display: 'flex', flexDirection: 'row', gap: '10px' }}>
               <button
                 onClick={() => {
-                  setScreen('deal');
+                  setScreen('promo');
                   if (featuredDeal) logEvent({ event_name: 'deal_clicked', session_id: getOrCreateSessionId(), deal_id: featuredDeal.id, metadata: { cta_type: 'reveal', restaurant: featuredDeal.restaurant_name, source: 'battle_results' } });
                 }}
                 style={{ flex: 1, background: '#D93025', color: '#FFF8E7', border: 'none', borderRadius: '20px', padding: '22px 12px', fontWeight: 800, fontSize: 'clamp(0.9375rem, 2.4vw, 1.125rem)', cursor: 'pointer', letterSpacing: '0.04em', WebkitTapHighlightColor: 'transparent', textAlign: 'center', lineHeight: 1.25 }}
@@ -288,7 +297,110 @@ export default function BattlePage() {
           </div>
         )}
 
-        {/* ── SCREEN 3: Deal ── */}
+        {/* ── SCREEN 3: Promo ── */}
+        {screen === 'promo' && (
+          <div className="animate-slide-in" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {/* Back */}
+            <button
+              onClick={() => setScreen('results')}
+              style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: '#8A7A6A', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer', padding: 0, alignSelf: 'flex-start' }}
+            >
+              <ChevronLeft size={16} />
+              Your results
+            </button>
+
+            {/* Promo card */}
+            <div style={{ background: '#FFFFFF', borderRadius: 16, overflow: 'hidden', boxShadow: '0 2px 20px rgba(28,28,28,0.10)' }}>
+              <div style={{ background: '#D93025', padding: '16px 20px' }}>
+                <p style={{ margin: 0, fontSize: '0.625rem', fontWeight: 700, color: 'rgba(255,248,231,0.7)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Exclusive offer</p>
+                <p style={{ margin: '4px 0 0', fontFamily: 'var(--font-playfair, "Playfair Display", serif)', fontWeight: 700, fontSize: '1.375rem', color: '#FFF8E7', lineHeight: 1.2 }}>Want a promo code for your favorite location?</p>
+              </div>
+
+              <div style={{ padding: '16px 20px 20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {!promoLocation ? (
+                  <>
+                    <p style={{ margin: 0, fontSize: '0.875rem', color: '#8A7A6A', lineHeight: 1.5 }}>Pick a spot and get an exclusive code just for you.</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {(['guidos', 'jets'] as const).map((loc) => {
+                        const info = loc === 'guidos'
+                          ? { name: "Guido's Pizza", emoji: '🍕' }
+                          : { name: "Jet's Pizza", emoji: '🔥' };
+                        return (
+                          <button
+                            key={loc}
+                            onClick={() => {
+                              const code = generatePromoCode(loc);
+                              setPromoLocation(loc);
+                              setGeneratedPromoCode(code);
+                              logEvent({ event_name: 'deal_clicked', session_id: getOrCreateSessionId(), metadata: { cta_type: 'promo_selected', restaurant: info.name, source: 'promo_screen' } });
+                            }}
+                            style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#FFF8E7', border: '2px solid #F2E8D0', borderRadius: 12, padding: '14px 16px', cursor: 'pointer', textAlign: 'left', WebkitTapHighlightColor: 'transparent' }}
+                          >
+                            <span style={{ fontSize: '1.75rem' }}>{info.emoji}</span>
+                            <span style={{ fontWeight: 700, fontSize: '1rem', color: '#1C1C1C' }}>{info.name}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p style={{ margin: 0, fontSize: '0.875rem', color: '#8A7A6A', lineHeight: 1.5 }}>
+                      Here&apos;s your exclusive code for {promoLocation === 'guidos' ? "Guido's Pizza" : "Jet's Pizza"}:
+                    </p>
+
+                    {/* Generated code badge */}
+                    <div style={{ background: '#F2E8D0', borderRadius: 10, padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div>
+                        <p style={{ margin: 0, fontSize: '0.625rem', fontWeight: 700, color: '#8A7A6A', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Promo code</p>
+                        <p style={{ margin: '2px 0 0', fontFamily: 'var(--font-ibm-mono, monospace)', fontWeight: 700, fontSize: '1.25rem', color: '#1C1C1C', letterSpacing: '0.1em' }}>{generatedPromoCode}</p>
+                      </div>
+                      <button
+                        onClick={async () => {
+                          if (!generatedPromoCode) return;
+                          await navigator.clipboard.writeText(generatedPromoCode);
+                          setPromoCopied(true);
+                          setTimeout(() => setPromoCopied(false), 2000);
+                        }}
+                        style={{ background: promoCopied ? '#2D6A4F' : '#1C1C1C', color: '#FFF8E7', border: 'none', borderRadius: 9999, padding: '8px 18px', fontWeight: 700, fontSize: '0.8125rem', cursor: 'pointer', transition: 'background 0.2s', letterSpacing: '0.02em', whiteSpace: 'nowrap' }}
+                      >
+                        {promoCopied ? '✓ Copied!' : 'Copy'}
+                      </button>
+                    </div>
+
+                    {/* Claim CTA */}
+                    <a
+                      href={promoLocation === 'guidos' ? 'https://www.guidospizzabrighton.com/promo_code' : 'https://www.jetspizza.com/deals/'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ display: 'block', background: '#D93025', color: '#FFF8E7', borderRadius: 9999, padding: '15px 0', fontWeight: 700, fontSize: '0.9375rem', textAlign: 'center', textDecoration: 'none', letterSpacing: '0.04em' }}
+                    >
+                      Claim at {promoLocation === 'guidos' ? "Guido's" : "Jet's"} →
+                    </a>
+
+                    {/* Switch location */}
+                    <button
+                      onClick={() => { setPromoLocation(null); setGeneratedPromoCode(null); setPromoCopied(false); }}
+                      style={{ background: 'none', border: 'none', color: '#8A7A6A', fontSize: '0.8125rem', fontWeight: 600, cursor: 'pointer', padding: 0, textAlign: 'center' }}
+                    >
+                      Pick a different location
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Skip link */}
+            <button
+              onClick={() => setScreen('deal')}
+              style={{ background: 'none', border: 'none', color: '#8A7A6A', fontSize: '0.8125rem', fontWeight: 600, cursor: 'pointer', padding: '4px 0', textAlign: 'center', textDecoration: 'underline', textDecorationColor: 'rgba(138,122,106,0.4)' }}
+            >
+              Skip, see my deal →
+            </button>
+          </div>
+        )}
+
+        {/* ── SCREEN 4: Deal ── */}
         {screen === 'deal' && featuredDeal && (
           <div className="animate-slide-in" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {/* Back */}
@@ -315,22 +427,22 @@ export default function BattlePage() {
                   )}
                 </div>
 
-                {promoCode && (
+                {featuredPromoCode && (
                   <div style={{ background: '#F2E8D0', borderRadius: 10, padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div>
                       <p style={{ margin: 0, fontSize: '0.625rem', fontWeight: 700, color: '#8A7A6A', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Promo code</p>
-                      <p style={{ margin: '2px 0 0', fontFamily: 'var(--font-ibm-mono, monospace)', fontWeight: 700, fontSize: '1.25rem', color: '#1C1C1C', letterSpacing: '0.1em' }}>{promoCode}</p>
+                      <p style={{ margin: '2px 0 0', fontFamily: 'var(--font-ibm-mono, monospace)', fontWeight: 700, fontSize: '1.25rem', color: '#1C1C1C', letterSpacing: '0.1em' }}>{featuredPromoCode}</p>
                     </div>
                     <button
                       onClick={async () => {
-                        await navigator.clipboard.writeText(promoCode);
-                        setCodeCopied(true);
-                        setTimeout(() => setCodeCopied(false), 2000);
+                        await navigator.clipboard.writeText(featuredPromoCode);
+                        setFeaturedCodeCopied(true);
+                        setTimeout(() => setFeaturedCodeCopied(false), 2000);
                         logEvent({ event_name: 'deal_clicked', session_id: getOrCreateSessionId(), deal_id: featuredDeal.id, metadata: { cta_type: 'copy_code', restaurant: featuredDeal.restaurant_name, source: 'deal_screen' } });
                       }}
-                      style={{ background: codeCopied ? '#2D6A4F' : '#1C1C1C', color: '#FFF8E7', border: 'none', borderRadius: 9999, padding: '8px 18px', fontWeight: 700, fontSize: '0.8125rem', cursor: 'pointer', transition: 'background 0.2s', letterSpacing: '0.02em', whiteSpace: 'nowrap' }}
+                      style={{ background: featuredCodeCopied ? '#2D6A4F' : '#1C1C1C', color: '#FFF8E7', border: 'none', borderRadius: 9999, padding: '8px 18px', fontWeight: 700, fontSize: '0.8125rem', cursor: 'pointer', transition: 'background 0.2s', letterSpacing: '0.02em', whiteSpace: 'nowrap' }}
                     >
-                      {codeCopied ? '✓ Copied!' : 'Copy'}
+                      {featuredCodeCopied ? '✓ Copied!' : 'Copy'}
                     </button>
                   </div>
                 )}
