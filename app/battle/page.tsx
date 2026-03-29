@@ -299,7 +299,7 @@ export default function BattlePage() {
 
         {/* ── SCREEN 3: Promo ── */}
         {screen === 'promo' && (
-          <div className="animate-slide-in" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div className="animate-slide-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             {/* Back */}
             <button
               onClick={() => setScreen('results')}
@@ -309,86 +309,87 @@ export default function BattlePage() {
               Your results
             </button>
 
-            {/* Promo card */}
-            <div style={{ background: '#FFFFFF', borderRadius: 16, overflow: 'hidden', boxShadow: '0 2px 20px rgba(28,28,28,0.10)' }}>
-              <div style={{ background: '#D93025', padding: '16px 20px' }}>
-                <p style={{ margin: 0, fontSize: '0.625rem', fontWeight: 700, color: 'rgba(255,248,231,0.7)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Exclusive offer</p>
-                <p style={{ margin: '4px 0 0', fontFamily: 'var(--font-playfair, "Playfair Display", serif)', fontWeight: 700, fontSize: '1.375rem', color: '#FFF8E7', lineHeight: 1.2 }}>Want a promo code for your favorite location?</p>
-              </div>
-
-              <div style={{ padding: '16px 20px 20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {!promoLocation ? (
-                  <>
-                    <p style={{ margin: 0, fontSize: '0.875rem', color: '#8A7A6A', lineHeight: 1.5 }}>Pick a spot and get an exclusive code just for you.</p>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                      {(['guidos', 'jets'] as const).map((loc) => {
-                        const info = loc === 'guidos'
-                          ? { name: "Guido's Pizza", emoji: '🍕' }
-                          : { name: "Jet's Pizza", emoji: '🔥' };
-                        return (
-                          <button
-                            key={loc}
-                            onClick={() => {
-                              const code = generatePromoCode(loc);
-                              setPromoLocation(loc);
-                              setGeneratedPromoCode(code);
-                              logEvent({ event_name: 'deal_clicked', session_id: getOrCreateSessionId(), metadata: { cta_type: 'promo_selected', restaurant: info.name, source: 'promo_screen' } });
-                            }}
-                            style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#FFF8E7', border: '2px solid #F2E8D0', borderRadius: 12, padding: '14px 16px', cursor: 'pointer', textAlign: 'left', WebkitTapHighlightColor: 'transparent' }}
-                          >
-                            <span style={{ fontSize: '1.75rem' }}>{info.emoji}</span>
-                            <span style={{ fontWeight: 700, fontSize: '1rem', color: '#1C1C1C' }}>{info.name}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <p style={{ margin: 0, fontSize: '0.875rem', color: '#8A7A6A', lineHeight: 1.5 }}>
-                      Here&apos;s your exclusive code for {promoLocation === 'guidos' ? "Guido's Pizza" : "Jet's Pizza"}:
-                    </p>
-
-                    {/* Generated code badge */}
-                    <div style={{ background: '#F2E8D0', borderRadius: 10, padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <div>
-                        <p style={{ margin: 0, fontSize: '0.625rem', fontWeight: 700, color: '#8A7A6A', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Promo code</p>
-                        <p style={{ margin: '2px 0 0', fontFamily: 'var(--font-ibm-mono, monospace)', fontWeight: 700, fontSize: '1.25rem', color: '#1C1C1C', letterSpacing: '0.1em' }}>{generatedPromoCode}</p>
-                      </div>
-                      <button
-                        onClick={async () => {
-                          if (!generatedPromoCode) return;
-                          await navigator.clipboard.writeText(generatedPromoCode);
-                          setPromoCopied(true);
-                          setTimeout(() => setPromoCopied(false), 2000);
-                        }}
-                        style={{ background: promoCopied ? '#2D6A4F' : '#1C1C1C', color: '#FFF8E7', border: 'none', borderRadius: 9999, padding: '8px 18px', fontWeight: 700, fontSize: '0.8125rem', cursor: 'pointer', transition: 'background 0.2s', letterSpacing: '0.02em', whiteSpace: 'nowrap' }}
-                      >
-                        {promoCopied ? '✓ Copied!' : 'Copy'}
-                      </button>
-                    </div>
-
-                    {/* Claim CTA */}
-                    <a
-                      href={promoLocation === 'guidos' ? 'https://www.guidospizzabrighton.com/promo_code' : 'https://www.jetspizza.com/deals/'}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ display: 'block', background: '#D93025', color: '#FFF8E7', borderRadius: 9999, padding: '15px 0', fontWeight: 700, fontSize: '0.9375rem', textAlign: 'center', textDecoration: 'none', letterSpacing: '0.04em' }}
-                    >
-                      Claim at {promoLocation === 'guidos' ? "Guido's" : "Jet's"} →
-                    </a>
-
-                    {/* Switch location */}
-                    <button
-                      onClick={() => { setPromoLocation(null); setGeneratedPromoCode(null); setPromoCopied(false); }}
-                      style={{ background: 'none', border: 'none', color: '#8A7A6A', fontSize: '0.8125rem', fontWeight: 600, cursor: 'pointer', padding: 0, textAlign: 'center' }}
-                    >
-                      Pick a different location
-                    </button>
-                  </>
-                )}
-              </div>
+            {/* Heading */}
+            <div style={{ textAlign: 'center', padding: '0 4px' }}>
+              <p style={{ margin: 0, fontSize: '0.6875rem', fontWeight: 700, color: '#D93025', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Exclusive offer</p>
+              <h2 style={{ margin: '6px 0 8px', fontFamily: 'var(--font-playfair, "Playfair Display", serif)', fontWeight: 700, fontSize: 'clamp(1.625rem, 5vw, 2.25rem)', color: '#1C1C1C', lineHeight: 1.2, letterSpacing: '-0.01em' }}>
+                Grab a promo code
+              </h2>
+              <p style={{ margin: 0, fontSize: '0.9375rem', color: '#8A7A6A', lineHeight: 1.5 }}>Pick your spot and get an exclusive code.</p>
             </div>
+
+            {!promoLocation ? (
+              /* Location picker — side by side */
+              <div style={{ display: 'flex', gap: '12px' }}>
+                {(['guidos', 'jets'] as const).map((loc) => {
+                  const name = loc === 'guidos' ? "Guido's Pizza" : "Jet's Pizza";
+                  return (
+                    <button
+                      key={loc}
+                      onClick={() => {
+                        const code = generatePromoCode(loc);
+                        setPromoLocation(loc);
+                        setGeneratedPromoCode(code);
+                        logEvent({ event_name: 'deal_clicked', session_id: getOrCreateSessionId(), metadata: { cta_type: 'promo_selected', restaurant: name, source: 'promo_screen' } });
+                      }}
+                      style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#FFFFFF', border: '2px solid #F2E8D0', borderRadius: 16, padding: '24px 12px', cursor: 'pointer', WebkitTapHighlightColor: 'transparent', boxShadow: '0 2px 12px rgba(28,28,28,0.06)', transition: 'border-color 0.15s' }}
+                    >
+                      <span style={{ fontFamily: 'var(--font-playfair, "Playfair Display", serif)', fontWeight: 700, fontSize: '1rem', color: '#1C1C1C', textAlign: 'center', lineHeight: 1.3 }}>{name}</span>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#D93025', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Get code</span>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              /* Code reveal */
+              <div style={{ background: '#FFFFFF', borderRadius: 16, overflow: 'hidden', boxShadow: '0 2px 20px rgba(28,28,28,0.08)' }}>
+                {/* Selected restaurant label */}
+                <div style={{ background: '#F2E8D0', padding: '10px 20px', borderBottom: '1px solid rgba(28,28,28,0.06)' }}>
+                  <p style={{ margin: 0, fontSize: '0.75rem', fontWeight: 700, color: '#8A7A6A', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                    {promoLocation === 'guidos' ? "Guido's Pizza" : "Jet's Pizza"}
+                  </p>
+                </div>
+
+                <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  {/* Code badge */}
+                  <div style={{ background: '#FFF8E7', border: '1.5px dashed #E8A020', borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                    <div>
+                      <p style={{ margin: 0, fontSize: '0.625rem', fontWeight: 700, color: '#8A7A6A', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Your promo code</p>
+                      <p style={{ margin: '4px 0 0', fontFamily: 'var(--font-ibm-mono, monospace)', fontWeight: 700, fontSize: '1.375rem', color: '#1C1C1C', letterSpacing: '0.12em' }}>{generatedPromoCode}</p>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        if (!generatedPromoCode) return;
+                        await navigator.clipboard.writeText(generatedPromoCode);
+                        setPromoCopied(true);
+                        setTimeout(() => setPromoCopied(false), 2000);
+                      }}
+                      style={{ flexShrink: 0, background: promoCopied ? '#2D6A4F' : '#1C1C1C', color: '#FFF8E7', border: 'none', borderRadius: 9999, padding: '10px 20px', fontWeight: 700, fontSize: '0.8125rem', cursor: 'pointer', transition: 'background 0.2s', letterSpacing: '0.02em', whiteSpace: 'nowrap' }}
+                    >
+                      {promoCopied ? '✓ Copied!' : 'Copy'}
+                    </button>
+                  </div>
+
+                  {/* Claim CTA */}
+                  <a
+                    href={promoLocation === 'guidos' ? 'https://www.guidospizzabrighton.com/promo_code' : 'https://www.jetspizza.com/deals/'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ display: 'block', background: '#D93025', color: '#FFF8E7', borderRadius: 9999, padding: '16px 0', fontWeight: 800, fontSize: '0.9375rem', textAlign: 'center', textDecoration: 'none', letterSpacing: '0.04em' }}
+                  >
+                    Claim at {promoLocation === 'guidos' ? "Guido's" : "Jet's"} →
+                  </a>
+
+                  {/* Switch */}
+                  <button
+                    onClick={() => { setPromoLocation(null); setGeneratedPromoCode(null); setPromoCopied(false); }}
+                    style={{ background: 'none', border: 'none', color: '#8A7A6A', fontSize: '0.8125rem', fontWeight: 600, cursor: 'pointer', padding: 0, textAlign: 'center' }}
+                  >
+                    Pick a different location
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Skip link */}
             <button
