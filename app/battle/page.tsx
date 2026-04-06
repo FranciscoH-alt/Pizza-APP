@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { ChevronLeft } from 'lucide-react';
 import type { Battle, Deal, VoteSelection } from '@/types';
-import { getVoteForBattle, getOrCreateSessionId, saveVote } from '@/lib/session';
+import { getVoteForBattle, getOrCreateSessionId, saveVote, getVotedBattles, resolveSession } from '@/lib/session';
 import { recordDailyVote } from '@/lib/streak';
 import { logEvent } from '@/lib/analytics';
 import { supabase } from '@/lib/supabase/client';
@@ -14,6 +14,15 @@ import SkeletonBattle from '@/components/SkeletonBattle';
 import PizzaConfetti from '@/components/PizzaConfetti';
 
 type Screen = 'battle' | 'results' | 'promo' | 'deal';
+type PromoLocation = 'jets' | 'chicago_brothers' | 'hungry_howies' | 'guidos' | 'little_caesars';
+
+const PROMO_CONFIG: Record<PromoLocation, { prefix: string; name: string; claimUrl: string }> = {
+  jets:             { prefix: 'JETS',  name: "Jet's Pizza",           claimUrl: 'https://order.jetspizza.com/mi007/menu' },
+  chicago_brothers: { prefix: 'CHIB',  name: 'Chicago Brothers Pizza', claimUrl: 'https://www.chicagobrotherspizza.com/event/managers-special-1699/' },
+  hungry_howies:    { prefix: 'HOWIE', name: "Hungry Howie's",         claimUrl: 'https://hungryhowies.hungerrush.com/order/menu/10#Deals' },
+  guidos:           { prefix: 'GUIDO', name: "Guido's Pizza",          claimUrl: 'https://www.guidospizzaauburnhills.com/view_coupon/614/Baby-Guido-Pop-9-99' },
+  little_caesars:   { prefix: 'LC',    name: 'Little Caesars',         claimUrl: 'https://littlecaesars.com/en-us/deals/' },
+};
 
 const TAGLINES: Record<string, string[]> = {
   round: ["You're a well-rounded person!", "Rolling with the classics!", "You're part of Team Round!", "Nice… keeping it classic!"],
@@ -28,8 +37,15 @@ function getTagline(option: string): string {
   return list[Math.floor(Math.random() * list.length)];
 }
 
+function generatePromoCode(location: PromoLocation): string {
+  const { prefix } = PROMO_CONFIG[location];
+  const suffix = Math.random().toString(36).slice(2, 6).toUpperCase();
+  return `${prefix}-${suffix}`;
+}
+
 export default function BattlePage() {
   const [battle, setBattle] = useState<Battle | null>(null);
+  const [allBattles, setAllBattles] = useState<Battle[]>([]);
   const [voted, setVoted] = useState<VoteSelection>(null);
   const [tagline, setTagline] = useState('');
   const [screen, setScreen] = useState<Screen>('battle');
@@ -41,16 +57,22 @@ export default function BattlePage() {
   const [shareCopied, setShareCopied] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [featuredCodeCopied, setFeaturedCodeCopied] = useState(false);
-  const [promoLocation, setPromoLocation] = useState<'guidos' | 'jets' | null>(null);
+  const [promoLocation, setPromoLocation] = useState<PromoLocation | null>(null);
   const [generatedPromoCode, setGeneratedPromoCode] = useState<string | null>(null);
   const [promoCopied, setPromoCopied] = useState(false);
+  // Tracks which restaurant the user picked on the promo screen (for deal matching)
+  const [selectedPromoRestaurant, setSelectedPromoRestaurant] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
       try {
-        const [battleRes, dealsRes] = await Promise.all([
+        // Resolve session — syncs localStorage UUID with IP mapping server-side
+        await resolveSession();
+
+        const [battleRes, dealsRes, allBattlesRes] = await Promise.all([
           fetch('/api/battle'),
           fetch('/api/deals'),
+          fetch('/api/battles'),
         ]);
 
         if (!battleRes.ok) throw new Error('No battle today');
@@ -60,6 +82,11 @@ export default function BattlePage() {
         if (dealsRes.ok) {
           const allDeals: Deal[] = await dealsRes.json();
           setDeals(allDeals);
+        }
+
+        if (allBattlesRes.ok) {
+          const all: Battle[] = await allBattlesRes.json();
+          setAllBattles(all);
         }
 
         const existingVote = getVoteForBattle(data.id);
@@ -137,6 +164,23 @@ export default function BattlePage() {
     logEvent({ event_name: 'results_viewed', session_id: sessionId, battle_id: battle.id });
   }
 
+  function handlePlayAgain() {
+    const votedMap = getVotedBattles();
+    const next = allBattles.find(b => b.id !== battle?.id && !votedMap[b.id]);
+    if (!next) return;
+    setBattle(next);
+    setVoted(null);
+    setTagline('');
+    setScreen('battle');
+    setPromoLocation(null);
+    setGeneratedPromoCode(null);
+    setPromoCopied(false);
+    setSelectedPromoRestaurant(null);
+    setFeaturedCodeCopied(false);
+    const sessionId = getOrCreateSessionId();
+    logEvent({ event_name: 'battle_viewed', session_id: sessionId, battle_id: next.id });
+  }
+
   async function handleShare() {
     if (!battle) return;
     const sessionId = getOrCreateSessionId();
@@ -170,34 +214,38 @@ export default function BattlePage() {
     );
   }
 
-  function generatePromoCode(location: 'guidos' | 'jets'): string {
-    const prefix = location === 'guidos' ? 'GUIDO' : 'JETS';
-    const suffix = Math.random().toString(36).slice(2, 6).toUpperCase();
-    return `${prefix}-${suffix}`;
-  }
-
-  function pickDeal(vote: VoteSelection): Deal | null {
+  function pickDeal(vote: VoteSelection, restaurantOverride?: string | null): Deal | null {
     if (!vote || deals.length === 0) return null;
+
+    // If a restaurant was explicitly chosen on the promo screen, filter to that restaurant
+    if (restaurantOverride) {
+      const restaurantDeals = deals.filter(d => d.restaurant_name === restaurantOverride);
+      if (restaurantDeals.length > 0) {
+        const dayIndex = Math.floor(Date.now() / (1000 * 60 * 60 * 24));
+        return restaurantDeals[dayIndex % restaurantDeals.length];
+      }
+    }
+
     const optionName = (vote === 'a' ? battle!.option_a : battle!.option_b).toLowerCase().trim();
 
     // Curated deal title lists per style — rotates daily
     const STYLE_DEALS: Record<string, string[]> = {
       square: [
-        'Large 1-Topping Pizza — $14.99',       // Jet's Detroit-Style
-        'Detroit Style — $12.99',                // Hungry Howie's
-        'Old World Pepperoni L Deep Dish — $24.95', // Guido's
-        'Small 1-Topping Pizza — $10.99',        // Jet's Detroit-Style small
-        'Slice Combo — $6.49',                   // Jet's deep dish slices
+        'Large 1-Topping Pizza — $14.99',
+        'Detroit Style — $12.99',
+        'Old World Pepperoni L Deep Dish — $24.95',
+        'Small 1-Topping Pizza — $10.99',
+        'Slice Combo — $6.49',
       ],
       round: [
-        'Large Hand Tossed Pizza — $13.99',      // Chicago Brothers
-        '$8.99 Large 1-Topping Pizza',           // Hungry Howie's round
-        'Medium 1-Topping Pizza — $7.99',        // Jet's hand tossed
-        '$11.99 Large 2-Topping Pizza',          // Hungry Howie's round
-        '$7.99 Small 2-Topping Pizza',           // Hungry Howie's round
+        'Large Hand Tossed Pizza — $13.99',
+        '$8.99 Large 1-Topping Pizza',
+        'Medium 1-Topping Pizza — $7.99',
+        '$11.99 Large 2-Topping Pizza',
+        '$7.99 Small 2-Topping Pizza',
       ],
       pepperoni: ['Large Pepperoni Duo — $11', 'Old World Pepperoni L Deep Dish — $24.95'],
-      cheese: ['Large Combo — $25.99', 'Manager\'s Special — $21.99'],
+      cheese: ['Large Combo — $25.99', "Manager's Special — $21.99"],
     };
 
     const titleList = STYLE_DEALS[optionName];
@@ -221,8 +269,12 @@ export default function BattlePage() {
     ) ?? deals[0];
   }
 
-  const featuredDeal = pickDeal(voted);
+  const featuredDeal = pickDeal(voted, selectedPromoRestaurant);
   const featuredPromoCode = featuredDeal?.description?.match(/(?:use\s+)?code[:\s]+([A-Z0-9_-]+)/i)?.[1] ?? null;
+
+  // Determine if there's another unvoted battle to play
+  const votedMap = getVotedBattles();
+  const hasNextBattle = allBattles.some(b => b.id !== battle.id && !votedMap[b.id]);
 
   return (
     <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
@@ -276,23 +328,35 @@ export default function BattlePage() {
               <ResultsBar battle={battle} voted={voted} hideTagline />
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'row', gap: '10px' }}>
-              <button
-                onClick={() => {
-                  setScreen('promo');
-                  if (featuredDeal) logEvent({ event_name: 'deal_clicked', session_id: getOrCreateSessionId(), deal_id: featuredDeal.id, metadata: { cta_type: 'reveal', restaurant: featuredDeal.restaurant_name, source: 'battle_results' } });
-                }}
-                style={{ flex: 1, background: '#D93025', color: '#FFF8E7', border: 'none', borderRadius: '20px', padding: '22px 12px', fontWeight: 800, fontSize: 'clamp(0.9375rem, 2.4vw, 1.125rem)', cursor: 'pointer', letterSpacing: '0.04em', WebkitTapHighlightColor: 'transparent', textAlign: 'center', lineHeight: 1.25 }}
-              >
-                DEAL FOR YOUR STYLE
-              </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ display: 'flex', flexDirection: 'row', gap: '10px' }}>
+                <button
+                  onClick={() => {
+                    setScreen('promo');
+                    if (featuredDeal) logEvent({ event_name: 'deal_clicked', session_id: getOrCreateSessionId(), deal_id: featuredDeal.id, metadata: { cta_type: 'reveal', restaurant: featuredDeal.restaurant_name, source: 'battle_results' } });
+                  }}
+                  style={{ flex: 1, background: '#D93025', color: '#FFF8E7', border: 'none', borderRadius: '20px', padding: '22px 12px', fontWeight: 800, fontSize: 'clamp(0.9375rem, 2.4vw, 1.125rem)', cursor: 'pointer', letterSpacing: '0.04em', WebkitTapHighlightColor: 'transparent', textAlign: 'center', lineHeight: 1.25 }}
+                >
+                  DEAL FOR YOUR STYLE
+                </button>
 
-              <button
-                onClick={handleShare}
-                style={{ flex: 1, background: '#1C1C1C', color: '#FFF8E7', border: 'none', borderRadius: '20px', padding: '22px 12px', fontWeight: 800, fontSize: 'clamp(0.9375rem, 2.4vw, 1.125rem)', cursor: 'pointer', letterSpacing: '0.04em', WebkitTapHighlightColor: 'transparent', textAlign: 'center', lineHeight: 1.25 }}
-              >
-                {shareCopied ? '✓ LINK COPIED!' : 'SHARE YOUR PICK'}
-              </button>
+                <button
+                  onClick={handleShare}
+                  style={{ flex: 1, background: '#1C1C1C', color: '#FFF8E7', border: 'none', borderRadius: '20px', padding: '22px 12px', fontWeight: 800, fontSize: 'clamp(0.9375rem, 2.4vw, 1.125rem)', cursor: 'pointer', letterSpacing: '0.04em', WebkitTapHighlightColor: 'transparent', textAlign: 'center', lineHeight: 1.25 }}
+                >
+                  {shareCopied ? '✓ LINK COPIED!' : 'SHARE YOUR PICK'}
+                </button>
+              </div>
+
+              {/* Play Again — only shown when there are unvoted battles */}
+              {hasNextBattle && (
+                <button
+                  onClick={handlePlayAgain}
+                  style={{ width: '100%', background: 'none', border: '2px solid #F2E8D0', borderRadius: '20px', padding: '14px 12px', fontWeight: 700, fontSize: '0.9375rem', color: '#8A7A6A', cursor: 'pointer', letterSpacing: '0.04em', WebkitTapHighlightColor: 'transparent', textAlign: 'center' }}
+                >
+                  PLAY AGAIN ↺
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -319,10 +383,11 @@ export default function BattlePage() {
             </div>
 
             {!promoLocation ? (
-              /* Location picker — side by side */
-              <div style={{ display: 'flex', gap: '12px' }}>
-                {(['guidos', 'jets'] as const).map((loc) => {
-                  const name = loc === 'guidos' ? "Guido's Pizza" : "Jet's Pizza";
+              /* Location picker — 2-column grid, last item centered if odd */
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                {(Object.keys(PROMO_CONFIG) as PromoLocation[]).map((loc, i, arr) => {
+                  const { name } = PROMO_CONFIG[loc];
+                  const isLastOdd = arr.length % 2 !== 0 && i === arr.length - 1;
                   return (
                     <button
                       key={loc}
@@ -330,12 +395,19 @@ export default function BattlePage() {
                         const code = generatePromoCode(loc);
                         setPromoLocation(loc);
                         setGeneratedPromoCode(code);
+                        setSelectedPromoRestaurant(PROMO_CONFIG[loc].name);
                         logEvent({ event_name: 'deal_clicked', session_id: getOrCreateSessionId(), metadata: { cta_type: 'promo_selected', restaurant: name, source: 'promo_screen' } });
                       }}
-                      style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#FFFFFF', border: '2px solid #F2E8D0', borderRadius: 16, padding: '24px 12px', cursor: 'pointer', WebkitTapHighlightColor: 'transparent', boxShadow: '0 2px 12px rgba(28,28,28,0.06)', transition: 'border-color 0.15s' }}
+                      style={{
+                        gridColumn: isLastOdd ? '1 / -1' : undefined,
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                        background: '#FFFFFF', border: '2px solid #F2E8D0', borderRadius: 16, padding: '20px 12px',
+                        cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
+                        boxShadow: '0 2px 12px rgba(28,28,28,0.06)', transition: 'border-color 0.15s',
+                      }}
                     >
-                      <span style={{ fontFamily: 'var(--font-playfair, "Playfair Display", serif)', fontWeight: 700, fontSize: '1rem', color: '#1C1C1C', textAlign: 'center', lineHeight: 1.3 }}>{name}</span>
-                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#D93025', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Get code</span>
+                      <span style={{ fontFamily: 'var(--font-playfair, "Playfair Display", serif)', fontWeight: 700, fontSize: '0.9375rem', color: '#1C1C1C', textAlign: 'center', lineHeight: 1.3 }}>{name}</span>
+                      <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: '#D93025', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Get code</span>
                     </button>
                   );
                 })}
@@ -346,7 +418,7 @@ export default function BattlePage() {
                 {/* Selected restaurant label */}
                 <div style={{ background: '#F2E8D0', padding: '10px 20px', borderBottom: '1px solid rgba(28,28,28,0.06)' }}>
                   <p style={{ margin: 0, fontSize: '0.75rem', fontWeight: 700, color: '#8A7A6A', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
-                    {promoLocation === 'guidos' ? "Guido's Pizza" : "Jet's Pizza"}
+                    {PROMO_CONFIG[promoLocation].name}
                   </p>
                 </div>
 
@@ -372,17 +444,17 @@ export default function BattlePage() {
 
                   {/* Claim CTA */}
                   <a
-                    href={promoLocation === 'guidos' ? 'https://www.guidospizzabrighton.com/promo_code' : 'https://www.jetspizza.com/deals/'}
+                    href={PROMO_CONFIG[promoLocation].claimUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{ display: 'block', background: '#D93025', color: '#FFF8E7', borderRadius: 9999, padding: '16px 0', fontWeight: 800, fontSize: '0.9375rem', textAlign: 'center', textDecoration: 'none', letterSpacing: '0.04em' }}
                   >
-                    Claim at {promoLocation === 'guidos' ? "Guido's" : "Jet's"} →
+                    Claim at {PROMO_CONFIG[promoLocation].name.split(' ')[0]} →
                   </a>
 
                   {/* Switch */}
                   <button
-                    onClick={() => { setPromoLocation(null); setGeneratedPromoCode(null); setPromoCopied(false); }}
+                    onClick={() => { setPromoLocation(null); setGeneratedPromoCode(null); setPromoCopied(false); setSelectedPromoRestaurant(null); }}
                     style={{ background: 'none', border: 'none', color: '#8A7A6A', fontSize: '0.8125rem', fontWeight: 600, cursor: 'pointer', padding: 0, textAlign: 'center' }}
                   >
                     Pick a different location
@@ -416,7 +488,9 @@ export default function BattlePage() {
             {/* Deal card */}
             <div style={{ background: '#FFFFFF', borderRadius: 16, overflow: 'hidden', boxShadow: '0 2px 20px rgba(28,28,28,0.10)' }}>
               <div style={{ background: '#D93025', padding: '16px 20px' }}>
-                <p style={{ margin: 0, fontSize: '0.625rem', fontWeight: 700, color: 'rgba(255,248,231,0.7)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Your style deal</p>
+                <p style={{ margin: 0, fontSize: '0.625rem', fontWeight: 700, color: 'rgba(255,248,231,0.7)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  {selectedPromoRestaurant ? 'Your spot deal' : 'Your style deal'}
+                </p>
                 <p style={{ margin: '4px 0 0', fontFamily: 'var(--font-playfair, "Playfair Display", serif)', fontWeight: 700, fontSize: '1.5rem', color: '#FFF8E7', lineHeight: 1.2 }}>{featuredDeal.restaurant_name}</p>
               </div>
 
