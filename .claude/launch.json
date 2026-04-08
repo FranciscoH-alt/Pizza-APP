@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "the-daily-slice",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeExecutable": "/opt/homebrew/bin/node",
+      "runtimeArgs": ["/Users/franciscohenriques/Pizza-App/the-daily-slice/node_modules/.bin/next", "dev"]
       "port": 3000
     }
   ]

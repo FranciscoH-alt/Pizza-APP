@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Playfair_Display, Inter, IBM_Plex_Mono } from 'next/font/google';
 import { Analytics } from '@vercel/analytics/next';
+import Heartbeat from '@/components/Heartbeat';
 import './globals.css';
 
 const playfair = Playfair_Display({
@@ -66,6 +67,10 @@ export default function RootLayout({
       <body>
         {children}
         <Analytics />
+        <Heartbeat />
+        <p style={{ position: 'fixed', bottom: '6px', right: '8px', fontSize: '9px', opacity: 0.25, color: '#1C1C1C', fontFamily: 'var(--font-inter)', pointerEvents: 'none', zIndex: 9999, userSelect: 'none' }}>
+          © keyservicecorp
+        </p>
       </body>
     </html>
   );

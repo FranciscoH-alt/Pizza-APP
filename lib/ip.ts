@@ -11,6 +11,11 @@ export interface GeoData extends Record<string, unknown> {
   city: string | null;
   region: string | null;
   country: string | null;
+  lat: number | null;
+  lon: number | null;
+  timezone: string | null;
+  isp: string | null;
+  zip: string | null;
 }
 
 export async function getClientGeo(req: NextRequest): Promise<GeoData> {
@@ -22,9 +27,19 @@ export async function getClientGeo(req: NextRequest): Promise<GeoData> {
     : null;
   const region = req.headers.get('x-vercel-ip-country-region');
   const country = req.headers.get('x-vercel-ip-country');
+  const latRaw = req.headers.get('x-vercel-ip-latitude');
+  const lonRaw = req.headers.get('x-vercel-ip-longitude');
+  const timezone = req.headers.get('x-vercel-ip-timezone');
 
   if (city || country) {
-    return { ip, city, region, country };
+    return {
+      ip, city, region, country,
+      lat: latRaw ? parseFloat(latRaw) : null,
+      lon: lonRaw ? parseFloat(lonRaw) : null,
+      timezone,
+      isp: null,
+      zip: null,
+    };
   }
 
   // Fallback for local dev / non-Vercel: ip-api.com (free, no key, 45 req/min)
@@ -32,7 +47,7 @@ export async function getClientGeo(req: NextRequest): Promise<GeoData> {
   if (!isLoopback) {
     try {
       const res = await fetch(
-        `http://ip-api.com/json/${ip}?fields=city,regionName,country`,
+        `http://ip-api.com/json/${ip}?fields=city,regionName,country,lat,lon,timezone,isp,zip`,
         { signal: AbortSignal.timeout(2000) }
       );
       if (res.ok) {
@@ -42,6 +57,11 @@ export async function getClientGeo(req: NextRequest): Promise<GeoData> {
           city: data.city ?? null,
           region: data.regionName ?? null,
           country: data.country ?? null,
+          lat: data.lat ?? null,
+          lon: data.lon ?? null,
+          timezone: data.timezone ?? null,
+          isp: data.isp ?? null,
+          zip: data.zip ?? null,
         };
       }
     } catch {
@@ -49,5 +69,5 @@ export async function getClientGeo(req: NextRequest): Promise<GeoData> {
     }
   }
 
-  return { ip, city: null, region: null, country: null };
+  return { ip, city: null, region: null, country: null, lat: null, lon: null, timezone: null, isp: null, zip: null };
 }

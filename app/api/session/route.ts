@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseService } from '@/lib/supabase/service';
 import { getClientIp } from '@/lib/ip';
+import { parseUA } from '@/lib/ua';
 
 /**
  * GET /api/session?sid=<client-uuid>
@@ -23,6 +24,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ session_id: sid });
   }
 
+  const ua = req.headers.get('user-agent') ?? '';
+  const parsed = parseUA(ua);
+
   try {
     const { data: existing } = await supabaseService
       .from('ip_sessions')
@@ -30,17 +34,29 @@ export async function GET(req: NextRequest) {
       .eq('ip_address', ip)
       .maybeSingle();
 
+    const now = new Date().toISOString();
+    const deviceFields = { user_agent: ua, ...parsed, last_seen_at: now };
+
     if (existing) {
       // IP already known
       if (!clientSid) {
         // Client lost localStorage → restore the server-side UUID
+        await supabaseService
+          .from('ip_sessions')
+          .update(deviceFields)
+          .eq('ip_address', ip);
         return NextResponse.json({ session_id: existing.session_id });
       }
       if (clientSid !== existing.session_id) {
         // localStorage UUID differs — localStorage wins; update server mapping
         await supabaseService
           .from('ip_sessions')
-          .update({ session_id: clientSid, updated_at: new Date().toISOString() })
+          .update({ session_id: clientSid, updated_at: now, ...deviceFields })
+          .eq('ip_address', ip);
+      } else {
+        await supabaseService
+          .from('ip_sessions')
+          .update(deviceFields)
           .eq('ip_address', ip);
       }
       return NextResponse.json({ session_id: clientSid });
@@ -50,7 +66,7 @@ export async function GET(req: NextRequest) {
     const newSid = clientSid ?? crypto.randomUUID();
     await supabaseService
       .from('ip_sessions')
-      .insert({ ip_address: ip, session_id: newSid });
+      .insert({ ip_address: ip, session_id: newSid, ...deviceFields });
 
     return NextResponse.json({ session_id: newSid });
   } catch {
