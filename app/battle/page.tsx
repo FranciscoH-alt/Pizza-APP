@@ -26,6 +26,28 @@ const PROMO_CONFIG: Record<PromoLocation, { prefix: string; name: string; claimU
   buddys:           { prefix: 'BUDDY', name: "Buddy's Pizza",          claimUrl: 'https://www.buddyspizza.com/deals',                                              logo: '/restaurants/buddys.png' },
 };
 
+// Fallback images keyed by option name (lowercase) for when DB image paths are missing/wrong
+const OPTION_IMAGE_FALLBACK: Record<string, string> = {
+  'square':            '/pizza/square.png',
+  'round':             '/pizza/round.png',
+  'pepperoni':         '/pizza/pepperoni.png',
+  'classic cheese':    '/pizza/cheese.png',
+  'cheese':            '/pizza/cheese.png',
+  'extra cheese':      '/pizza/cheese-pull.png',
+  'extra sauce':       '/pizza/marinara.png',
+  'thin crust':        '/pizza/pepperoni-thin.png',
+  'deep dish':         '/pizza/deep-dish.png',
+  "jet's pizza":       '/restaurants/jets.png',
+  "buddy's pizza":     '/restaurants/buddys.png',
+  'classic margherita':'/pizza/margherita.png',
+  'meat lovers':       '/pizza/meatlovers.png',
+};
+
+function resolveImage(dbImage: string | null, optionName: string): string | null {
+  if (dbImage) return dbImage;
+  return OPTION_IMAGE_FALLBACK[optionName.toLowerCase().trim()] ?? null;
+}
+
 const TAGLINES: Record<string, string[]> = {
   round: ["You're a well-rounded person!", "Rolling with the classics!", "You're part of Team Round!", "Nice… keeping it classic!"],
   square: ["You're not a square!", "You like a square deal!", "You're part of Team Square!", "Corners > curves. Respect."],
@@ -296,7 +318,7 @@ export default function BattlePage() {
             <div className="animate-fade-up delay-100" style={{ display: 'flex', gap: 'clamp(12px, 2vw, 24px)', alignItems: 'stretch' }}>
               <BattleCard
                 name={battle.option_a}
-                image={battle.image_a}
+                image={resolveImage(battle.image_a, battle.option_a)}
                 side="a"
                 onClick={() => handleCardVote('a')}
                 disabled={voting}
@@ -307,7 +329,7 @@ export default function BattlePage() {
               </div>
               <BattleCard
                 name={battle.option_b}
-                image={battle.image_b}
+                image={resolveImage(battle.image_b, battle.option_b)}
                 side="b"
                 onClick={() => handleCardVote('b')}
                 disabled={voting}
