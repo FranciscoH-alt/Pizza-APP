@@ -15,15 +15,10 @@ import SkeletonBattle from '@/components/SkeletonBattle';
 import PizzaConfetti from '@/components/PizzaConfetti';
 
 type Screen = 'battle' | 'results' | 'promo' | 'deal';
-type PromoLocation = 'jets' | 'chicago_brothers' | 'hungry_howies' | 'guidos' | 'little_caesars' | 'buddys';
+type PromoLocation = 'guidos';
 
 const PROMO_CONFIG: Record<PromoLocation, { prefix: string; name: string; claimUrl: string; logo?: string }> = {
-  jets:             { prefix: 'JETS',  name: "Jet's Pizza",           claimUrl: 'https://order.jetspizza.com/mi007/menu',                                          logo: '/restaurants/jets.png' },
-  chicago_brothers: { prefix: 'CHIB',  name: 'Chicago Brothers Pizza', claimUrl: 'https://www.chicagobrotherspizza.com/event/managers-special-1699/' },
-  hungry_howies:    { prefix: 'HOWIE', name: "Hungry Howie's",         claimUrl: 'https://hungryhowies.hungerrush.com/order/menu/10#Deals' },
-  guidos:           { prefix: 'GUIDO', name: "Guido's Pizza",          claimUrl: 'https://www.guidospizzaauburnhills.com/view_coupon/614/Baby-Guido-Pop-9-99' },
-  little_caesars:   { prefix: 'LC',    name: 'Little Caesars',         claimUrl: 'https://littlecaesars.com/en-us/deals/' },
-  buddys:           { prefix: 'BUDDY', name: "Buddy's Pizza",          claimUrl: 'https://www.buddyspizza.com/deals',                                              logo: '/restaurants/buddys.png' },
+  guidos: { prefix: 'GUIDO', name: "Guido's Pizza", claimUrl: 'https://www.guidospizzaauburnhills.com/view_coupon/614/Baby-Guido-Pop-9-99', logo: '/restaurants/guidos.png' },
 };
 
 // Fallback images keyed by option name (lowercase) for when DB image paths are missing/wrong
