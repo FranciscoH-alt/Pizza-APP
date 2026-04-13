@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { ChevronLeft } from 'lucide-react';
 import type { Battle, Deal, VoteSelection } from '@/types';
@@ -14,14 +15,15 @@ import SkeletonBattle from '@/components/SkeletonBattle';
 import PizzaConfetti from '@/components/PizzaConfetti';
 
 type Screen = 'battle' | 'results' | 'promo' | 'deal';
-type PromoLocation = 'jets' | 'chicago_brothers' | 'hungry_howies' | 'guidos' | 'little_caesars';
+type PromoLocation = 'jets' | 'chicago_brothers' | 'hungry_howies' | 'guidos' | 'little_caesars' | 'buddys';
 
-const PROMO_CONFIG: Record<PromoLocation, { prefix: string; name: string; claimUrl: string }> = {
-  jets:             { prefix: 'JETS',  name: "Jet's Pizza",           claimUrl: 'https://order.jetspizza.com/mi007/menu' },
+const PROMO_CONFIG: Record<PromoLocation, { prefix: string; name: string; claimUrl: string; logo?: string }> = {
+  jets:             { prefix: 'JETS',  name: "Jet's Pizza",           claimUrl: 'https://order.jetspizza.com/mi007/menu',                                          logo: '/restaurants/jets.png' },
   chicago_brothers: { prefix: 'CHIB',  name: 'Chicago Brothers Pizza', claimUrl: 'https://www.chicagobrotherspizza.com/event/managers-special-1699/' },
   hungry_howies:    { prefix: 'HOWIE', name: "Hungry Howie's",         claimUrl: 'https://hungryhowies.hungerrush.com/order/menu/10#Deals' },
   guidos:           { prefix: 'GUIDO', name: "Guido's Pizza",          claimUrl: 'https://www.guidospizzaauburnhills.com/view_coupon/614/Baby-Guido-Pop-9-99' },
   little_caesars:   { prefix: 'LC',    name: 'Little Caesars',         claimUrl: 'https://littlecaesars.com/en-us/deals/' },
+  buddys:           { prefix: 'BUDDY', name: "Buddy's Pizza",          claimUrl: 'https://www.buddyspizza.com/deals',                                              logo: '/restaurants/buddys.png' },
 };
 
 const TAGLINES: Record<string, string[]> = {
@@ -329,6 +331,16 @@ export default function BattlePage() {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {/* Play Again — shown first when there are unvoted battles */}
+              {hasNextBattle && (
+                <button
+                  onClick={handlePlayAgain}
+                  style={{ width: '100%', background: 'none', border: '2px solid #F2E8D0', borderRadius: '20px', padding: '14px 12px', fontWeight: 700, fontSize: '0.9375rem', color: '#8A7A6A', cursor: 'pointer', letterSpacing: '0.04em', WebkitTapHighlightColor: 'transparent', textAlign: 'center' }}
+                >
+                  PLAY AGAIN ↺
+                </button>
+              )}
+
               <div style={{ display: 'flex', flexDirection: 'row', gap: '10px' }}>
                 <button
                   onClick={() => {
@@ -347,16 +359,6 @@ export default function BattlePage() {
                   {shareCopied ? '✓ LINK COPIED!' : 'SHARE YOUR PICK'}
                 </button>
               </div>
-
-              {/* Play Again — only shown when there are unvoted battles */}
-              {hasNextBattle && (
-                <button
-                  onClick={handlePlayAgain}
-                  style={{ width: '100%', background: 'none', border: '2px solid #F2E8D0', borderRadius: '20px', padding: '14px 12px', fontWeight: 700, fontSize: '0.9375rem', color: '#8A7A6A', cursor: 'pointer', letterSpacing: '0.04em', WebkitTapHighlightColor: 'transparent', textAlign: 'center' }}
-                >
-                  PLAY AGAIN ↺
-                </button>
-              )}
             </div>
           </div>
         )}
@@ -406,7 +408,13 @@ export default function BattlePage() {
                         boxShadow: '0 2px 12px rgba(28,28,28,0.06)', transition: 'border-color 0.15s',
                       }}
                     >
-                      <span style={{ fontFamily: 'var(--font-playfair, "Playfair Display", serif)', fontWeight: 700, fontSize: '0.9375rem', color: '#1C1C1C', textAlign: 'center', lineHeight: 1.3 }}>{name}</span>
+                      {PROMO_CONFIG[loc].logo ? (
+                        <div style={{ position: 'relative', width: '72px', height: '48px' }}>
+                          <Image src={PROMO_CONFIG[loc].logo!} alt={name} fill style={{ objectFit: 'contain' }} sizes="72px" />
+                        </div>
+                      ) : (
+                        <span style={{ fontFamily: 'var(--font-playfair, "Playfair Display", serif)', fontWeight: 700, fontSize: '0.9375rem', color: '#1C1C1C', textAlign: 'center', lineHeight: 1.3 }}>{name}</span>
+                      )}
                       <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: '#D93025', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Get code</span>
                     </button>
                   );
