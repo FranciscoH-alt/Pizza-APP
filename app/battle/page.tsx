@@ -185,7 +185,10 @@ export default function BattlePage() {
 
   function handlePlayAgain() {
     const votedMap = getVotedBattles();
-    const next = allBattles.find(b => b.id !== battle?.id && !votedMap[b.id]);
+    // Prefer an unvoted battle; if all voted, cycle to any other battle
+    const next =
+      allBattles.find(b => b.id !== battle?.id && !votedMap[b.id]) ??
+      allBattles.find(b => b.id !== battle?.id);
     if (!next) return;
     setBattle(next);
     setVoted(null);
@@ -291,9 +294,7 @@ export default function BattlePage() {
   const featuredDeal = pickDeal(voted, selectedPromoRestaurant);
   const featuredPromoCode = featuredDeal?.description?.match(/(?:use\s+)?code[:\s]+([A-Z0-9_-]+)/i)?.[1] ?? null;
 
-  // Determine if there's another unvoted battle to play
-  const votedMap = getVotedBattles();
-  const hasNextBattle = allBattles.some(b => b.id !== battle.id && !votedMap[b.id]);
+  const hasNextBattle = allBattles.some(b => b.id !== battle.id);
 
   return (
     <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
