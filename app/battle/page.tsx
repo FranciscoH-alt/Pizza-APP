@@ -185,10 +185,12 @@ export default function BattlePage() {
 
   function handlePlayAgain() {
     const votedMap = getVotedBattles();
-    // Prefer an unvoted battle; if all voted, cycle to any other battle
+    // Prefer an unvoted battle; if all voted, loop back from the beginning
+    const currentIndex = allBattles.findIndex(b => b.id === battle?.id);
+    const ordered = [...allBattles.slice(currentIndex + 1), ...allBattles.slice(0, currentIndex)];
     const next =
-      allBattles.find(b => b.id !== battle?.id && !votedMap[b.id]) ??
-      allBattles.find(b => b.id !== battle?.id);
+      ordered.find(b => !votedMap[b.id]) ??
+      ordered[0];
     if (!next) return;
     setBattle(next);
     setVoted(null);
@@ -427,7 +429,7 @@ export default function BattlePage() {
                       }}
                     >
                       {PROMO_CONFIG[loc].logo ? (
-                        <div style={{ position: 'relative', width: '72px', height: '48px' }}>
+                        <div style={{ position: 'relative', width: '120px', height: '80px' }}>
                           <Image src={PROMO_CONFIG[loc].logo!} alt={name} fill style={{ objectFit: 'contain' }} sizes="72px" />
                         </div>
                       ) : (
