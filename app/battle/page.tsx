@@ -18,7 +18,7 @@ type Screen = 'battle' | 'results' | 'promo' | 'deal';
 type PromoLocation = 'guidos';
 
 const PROMO_CONFIG: Record<PromoLocation, { prefix: string; name: string; claimUrl: string; logo?: string }> = {
-  guidos: { prefix: 'GUIDO', name: "Guido's Pizza", claimUrl: 'https://www.guidospizzaauburnhills.com/view_coupon/614/Baby-Guido-Pop-9-99', logo: '/restaurants/guidos.png' },
+  guidos: { prefix: 'GUIDO', name: "Guido's Pizza", claimUrl: 'https://www.guidospizzaauburnhills.com/promo_code', logo: '/restaurants/guidos.png' },
 };
 
 // Fallback images keyed by option name (lowercase) for when DB image paths are missing/wrong
