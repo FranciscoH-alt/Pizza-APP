@@ -203,6 +203,7 @@ export default function BattlePage() {
     setSelectedPromoRestaurant(null);
     setFeaturedCodeCopied(false);
     const sessionId = getOrCreateSessionId();
+    logEvent({ event_name: 'play_again', session_id: sessionId, battle_id: battle?.id, metadata: { next_battle_id: next.id } });
     logEvent({ event_name: 'battle_viewed', session_id: sessionId, battle_id: next.id });
   }
 
@@ -218,10 +219,15 @@ export default function BattlePage() {
       : `Today's battle: ${battle.title}\nVote at ${appUrl}`;
 
     if (navigator.share) {
-      try { await navigator.share({ text: shareText, url: appUrl }); return; } catch { /* dismissed */ }
+      try {
+        await navigator.share({ text: shareText, url: appUrl });
+        logEvent({ event_name: 'share_completed', session_id: sessionId, battle_id: battle.id, metadata: { method: 'native' } });
+        return;
+      } catch { /* dismissed */ }
     }
     try {
       await navigator.clipboard.writeText(shareText);
+      logEvent({ event_name: 'share_completed', session_id: sessionId, battle_id: battle.id, metadata: { method: 'clipboard' } });
       setShareCopied(true);
       setTimeout(() => setShareCopied(false), 2000);
     } catch { /* ignore */ }
@@ -496,7 +502,12 @@ export default function BattlePage() {
 
             {/* Skip link */}
             <button
-              onClick={() => setScreen('deal')}
+              onClick={() => {
+                const sid = getOrCreateSessionId();
+                logEvent({ event_name: 'promo_skipped', session_id: sid, metadata: { source: 'promo_screen' } });
+                logEvent({ event_name: 'deal_viewed', session_id: sid, metadata: { source: 'promo_skip' } });
+                setScreen('deal');
+              }}
               style={{ background: 'none', border: 'none', color: '#8A7A6A', fontSize: '0.8125rem', fontWeight: 600, cursor: 'pointer', padding: '4px 0', textAlign: 'center', textDecoration: 'underline', textDecorationColor: 'rgba(138,122,106,0.4)' }}
             >
               Skip, see my deal →
