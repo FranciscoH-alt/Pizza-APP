@@ -15,10 +15,11 @@ import SkeletonBattle from '@/components/SkeletonBattle';
 import PizzaConfetti from '@/components/PizzaConfetti';
 
 type Screen = 'battle' | 'results' | 'promo' | 'deal';
-type PromoLocation = 'guidos';
+type PromoLocation = 'guidos' | 'jets';
 
 const PROMO_CONFIG: Record<PromoLocation, { prefix: string; name: string; claimUrl: string; logo?: string }> = {
   guidos: { prefix: 'GUIDO', name: "Guido's Pizza", claimUrl: 'https://www.guidospizzaauburnhills.com/promo_code', logo: '/restaurants/guidos.png' },
+  jets:   { prefix: 'JETS',  name: "Jet's Pizza",   claimUrl: 'https://order.jetspizza.com/mi078/account/promo-code', logo: '/restaurants/jets.png' },
 };
 
 // Fallback images keyed by option name (lowercase) for when DB image paths are missing/wrong
@@ -461,6 +462,7 @@ export default function BattlePage() {
                       onClick={async () => {
                         if (!generatedPromoCode) return;
                         await navigator.clipboard.writeText(generatedPromoCode);
+                        logEvent({ event_name: 'promo_code_copied', session_id: getOrCreateSessionId(), metadata: { restaurant: PROMO_CONFIG[promoLocation!].name, code: generatedPromoCode } });
                         setPromoCopied(true);
                         setTimeout(() => setPromoCopied(false), 2000);
                       }}
@@ -475,6 +477,7 @@ export default function BattlePage() {
                     href={PROMO_CONFIG[promoLocation].claimUrl}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={() => logEvent({ event_name: 'promo_code_claimed', session_id: getOrCreateSessionId(), metadata: { restaurant: PROMO_CONFIG[promoLocation].name, code: generatedPromoCode } })}
                     style={{ display: 'block', background: '#D93025', color: '#FFF8E7', borderRadius: 9999, padding: '16px 0', fontWeight: 800, fontSize: '0.9375rem', textAlign: 'center', textDecoration: 'none', letterSpacing: '0.04em' }}
                   >
                     Claim at {PROMO_CONFIG[promoLocation].name.split(' ')[0]} →
