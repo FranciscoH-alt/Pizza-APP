@@ -10,16 +10,17 @@ type VoteRow   = { session_id: string; selected: 'a' | 'b'; battles: { title: st
 type EventRow  = { session_id: string | null; event_name: string; metadata: Record<string, unknown> | null; created_at: string };
 
 type SessionRow = {
-  session_id:     string;
-  ip_address:     string;
-  last_seen:      string;
-  votes:          { option: string; side: 'a' | 'b' }[];
-  played_again:   boolean;
-  promo_copied:   boolean;
-  promo_claimed:  boolean;
-  promo_skipped:  boolean;
-  deal_viewed:    boolean;
-  deal_used:      boolean;
+  session_id:      string;
+  ip_address:      string;
+  location:        string | null;
+  last_seen:       string;
+  votes:           { option: string; side: 'a' | 'b' }[];
+  played_again:    boolean;
+  promo_copied:    boolean;
+  promo_claimed:   boolean;
+  promo_skipped:   boolean;
+  deal_viewed:     boolean;
+  deal_used:       boolean;
   share_completed: boolean;
 };
 
@@ -69,6 +70,7 @@ export default async function AdminPage() {
       .from('events')
       .select('session_id, event_name, metadata, created_at')
       .in('event_name', [
+        'vote_cast',
         'promo_code_copied', 'promo_code_claimed', 'deal_clicked',
         'play_again', 'promo_skipped', 'deal_viewed', 'share_completed',
       ])
@@ -83,9 +85,19 @@ export default async function AdminPage() {
     const sv = votes.filter((v) => v.session_id === s.session_id);
     const se = events.filter((e) => e.session_id === s.session_id);
 
+    // Geo from the first vote_cast event that has city/region data
+    const geoEvent = se.find((e) => e.event_name === 'vote_cast' && e.metadata?.city);
+    const city    = geoEvent?.metadata?.city    as string | null ?? null;
+    const region  = geoEvent?.metadata?.region  as string | null ?? null;
+    const country = geoEvent?.metadata?.country as string | null ?? null;
+    const location = city && region
+      ? `${city}, ${region}`
+      : city ?? region ?? (country ?? null);
+
     return {
       session_id:      s.session_id,
       ip_address:      s.ip_address,
+      location,
       last_seen:       s.updated_at,
       votes: sv.map((v) => ({
         option: v.selected === 'a' ? (v.battles?.option_a ?? 'Option A') : (v.battles?.option_b ?? 'Option B'),
@@ -122,7 +134,7 @@ export default async function AdminPage() {
   });
 
   const COLS = [
-    'IP Address', 'Last Active', 'Choice(s)', 'Battles',
+    'IP Address', 'Location', 'Last Active', 'Choice(s)', 'Battles',
     'Played Again', 'Shared', 'Promo Copied', 'Promo Claimed',
     'Promo Skipped', 'Saw Deal', 'Deal Used',
   ];
@@ -197,6 +209,12 @@ export default async function AdminPage() {
 
                     <td style={{ padding: '12px 16px', fontFamily: 'ui-monospace, monospace', fontSize: '0.75rem', fontWeight: 600, color: '#111827', whiteSpace: 'nowrap' }}>
                       {row.ip_address}
+                    </td>
+
+                    <td style={{ padding: '12px 16px', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
+                      {row.location
+                        ? <span style={{ color: '#111827', fontWeight: 500 }}>{row.location}</span>
+                        : <span style={{ color: '#D1D5DB' }}>—</span>}
                     </td>
 
                     <td style={{ padding: '12px 16px', whiteSpace: 'nowrap', fontSize: '0.75rem', color: '#6B7280' }}>
