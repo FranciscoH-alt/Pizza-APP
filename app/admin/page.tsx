@@ -70,7 +70,6 @@ export default async function AdminPage() {
       .from('events')
       .select('session_id, event_name, metadata, created_at')
       .in('event_name', [
-        'vote_cast',
         'promo_code_copied', 'promo_code_claimed', 'deal_clicked',
         'play_again', 'promo_skipped', 'deal_viewed', 'share_completed',
       ])
@@ -81,29 +80,45 @@ export default async function AdminPage() {
   const votes:      VoteRow[]   = (votesRes.data  as unknown as VoteRow[])   ?? [];
   const events:     EventRow[]  = (eventsRes.data as unknown as EventRow[])  ?? [];
 
+  // Batch geo lookup for all real IPs
+  const realIps = ipSessions.map((s) => s.ip_address).filter(
+    (ip) => ip && ip !== '::1' && ip !== '127.0.0.1' && !ip.startsWith('192.168') && !ip.startsWith('10.'),
+  );
+  const geoMap: Record<string, string> = {};
+  if (realIps.length > 0) {
+    try {
+      const res = await fetch('http://ip-api.com/batch?fields=query,city,regionName,country', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(realIps.map((ip) => ({ query: ip }))),
+        signal: AbortSignal.timeout(4000),
+      });
+      if (res.ok) {
+        const results: { query: string; city?: string; regionName?: string; country?: string }[] = await res.json();
+        for (const r of results) {
+          const parts = [r.city, r.regionName].filter(Boolean);
+          if (parts.length) geoMap[r.query] = parts.join(', ');
+          else if (r.country) geoMap[r.query] = r.country;
+        }
+      }
+    } catch { /* geo unavailable — show — */ }
+  }
+
   const rows: SessionRow[] = ipSessions.map((s) => {
     const sv = votes.filter((v) => v.session_id === s.session_id);
     const se = events.filter((e) => e.session_id === s.session_id);
 
-    // Geo from the first vote_cast event that has city/region data
-    const geoEvent = se.find((e) => e.event_name === 'vote_cast' && e.metadata?.city);
-    const city    = geoEvent?.metadata?.city    as string | null ?? null;
-    const region  = geoEvent?.metadata?.region  as string | null ?? null;
-    const country = geoEvent?.metadata?.country as string | null ?? null;
-    const location = city && region
-      ? `${city}, ${region}`
-      : city ?? region ?? (country ?? null);
-
     return {
       session_id:      s.session_id,
       ip_address:      s.ip_address,
-      location,
+      location:        geoMap[s.ip_address] ?? null,
       last_seen:       s.updated_at,
       votes: sv.map((v) => ({
         option: v.selected === 'a' ? (v.battles?.option_a ?? 'Option A') : (v.battles?.option_b ?? 'Option B'),
         side:   v.selected,
       })),
-      played_again:    se.some((e) => e.event_name === 'play_again'),
+      // fall back to vote count for sessions predating the play_again event
+      played_again:    se.some((e) => e.event_name === 'play_again') || sv.length > 1,
       promo_copied:    se.some((e) => e.event_name === 'promo_code_copied'),
       promo_claimed:   se.some((e) => e.event_name === 'promo_code_claimed'),
       promo_skipped:   se.some((e) => e.event_name === 'promo_skipped'),
