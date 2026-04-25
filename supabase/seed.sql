@@ -276,4 +276,32 @@ INSERT INTO deals (restaurant_name, title, description, area, expiration, phone,
   NULL, NULL, NULL,
   'https://littlecaesars.com/en-us/deals/',
   true, 18
+),
+-- Cottage Inn Pizza
+(
+  'Cottage Inn Pizza',
+  'New York Style 16" X-Large 2-Topping — $14.99',
+  'Limited time offer. New York style 16" X-Large pizza with any 2 toppings.',
+  'Lake Orion',
+  NULL, NULL, NULL,
+  'https://order.cottageinn.com/?uniqueStoreIdentifier=LAKEORION&security_token=undefined#/',
+  true, 19
+),
+(
+  'Cottage Inn Pizza',
+  'Large 1-Topping — $11.99',
+  'Any large 1-topping pizza.',
+  'Lake Orion',
+  NULL, NULL, NULL,
+  'https://order.cottageinn.com/?uniqueStoreIdentifier=LAKEORION&security_token=undefined#/',
+  true, 20
+),
+(
+  'Cottage Inn Pizza',
+  'Brookie Combo — $27.99',
+  'Any large gourmet pizza and a Brookie.',
+  'Lake Orion',
+  NULL, NULL, NULL,
+  'https://order.cottageinn.com/?uniqueStoreIdentifier=LAKEORION&security_token=undefined#/',
+  true, 21
 );
