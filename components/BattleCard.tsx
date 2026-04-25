@@ -58,43 +58,131 @@ export default function BattleCard({ name, image, side, onClick, selected, dimme
             : '0 2px 12px rgba(28,28,28,0.10)',
           transition: 'box-shadow 0.2s ease',
           position: 'relative',
+          display: isLogo ? 'flex' : undefined,
+          flexDirection: isLogo ? 'column' : undefined,
         }}
       >
-        {/* Image area */}
-        <div
-          style={{
-            position: 'relative',
-            height: fillHeight ? '100%' : compact ? '260px' : 'clamp(340px, 58vh, 620px)',
-            background: isLogo ? '#FFF8E7' : fallbackGradient,
-            overflow: 'hidden',
-          }}
-        >
-          {image ? (
-            <Image
-              src={image}
-              alt={name}
-              fill
-              style={{ objectFit: isLogo ? 'contain' : 'cover', padding: isLogo ? '24px' : 0 }}
-              sizes="(max-width: 480px) 50vw, 240px"
-              priority
-            />
-          ) : (
+        {isLogo ? (
+          /* ── Logo card: structured layout ── */
+          <>
+            {/* Logo zone — white bg, logo centered */}
             <div
               style={{
-                position: 'absolute',
-                inset: 0,
+                flex: 1,
+                position: 'relative',
+                height: fillHeight ? undefined : compact ? '180px' : 'clamp(240px, 44vh, 500px)',
+                background: '#FFFFFF',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '3.5rem',
               }}
             >
-              🍕
+              {image && (
+                <Image
+                  src={image}
+                  alt={name}
+                  fill
+                  style={{ objectFit: 'contain', padding: '28px' }}
+                  sizes="(max-width: 480px) 50vw, 240px"
+                  priority
+                />
+              )}
+              {/* Checkmark badge */}
+              {selected && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '10px',
+                    right: '10px',
+                    width: 28,
+                    height: 28,
+                    borderRadius: '50%',
+                    background: accentColor,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                    zIndex: 1,
+                  }}
+                >
+                  <Check size={15} color="#FFF" strokeWidth={3} />
+                </div>
+              )}
             </div>
-          )}
 
-          {/* Top gradient for name readability — only for photo images */}
-          {!isLogo && (
+            {/* Footer strip — accent color, name + cta */}
+            <div
+              style={{
+                background: accentColor,
+                padding: '16px 12px',
+                textAlign: 'center',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '4px',
+              }}
+            >
+              <p
+                style={{
+                  fontFamily: 'var(--font-playfair, "Playfair Display", Georgia, serif)',
+                  fontWeight: 700,
+                  fontSize: 'clamp(1rem, 3vw, 1.25rem)',
+                  color: '#FFFFFF',
+                  margin: 0,
+                  lineHeight: 1.2,
+                  letterSpacing: '-0.01em',
+                }}
+              >
+                {name}
+              </p>
+              <span
+                style={{
+                  fontSize: '0.6875rem',
+                  fontWeight: 800,
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                  color: selected ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.65)',
+                }}
+              >
+                {selected ? '✓ Selected' : 'Tap to vote'}
+              </span>
+            </div>
+          </>
+        ) : (
+          /* ── Photo card: original full-bleed layout ── */
+          <div
+            style={{
+              position: 'relative',
+              height: fillHeight ? '100%' : compact ? '260px' : 'clamp(340px, 58vh, 620px)',
+              background: fallbackGradient,
+              overflow: 'hidden',
+            }}
+          >
+            {image ? (
+              <Image
+                src={image}
+                alt={name}
+                fill
+                style={{ objectFit: 'cover' }}
+                sizes="(max-width: 480px) 50vw, 240px"
+                priority
+              />
+            ) : (
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '3.5rem',
+                }}
+              >
+                🍕
+              </div>
+            )}
+
+            {/* Top gradient for name readability */}
             <div
               style={{
                 position: 'absolute',
@@ -105,85 +193,77 @@ export default function BattleCard({ name, image, side, onClick, selected, dimme
                 background: 'linear-gradient(to bottom, rgba(0,0,0,0.80), transparent)',
               }}
             />
-          )}
 
-          {/* Name overlay */}
-          <div
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              padding: '16px 16px',
-            }}
-          >
-            <p
-              style={{
-                fontFamily: 'var(--font-playfair, "Playfair Display", Georgia, serif)',
-                fontWeight: 700,
-                fontSize: 'clamp(1.75rem, 5vw, 2.75rem)',
-                color: isLogo ? '#1C1C1C' : '#FFFFFF',
-                margin: 0,
-                lineHeight: 1.2,
-                textShadow: isLogo ? 'none' : '0 1px 4px rgba(0,0,0,0.5)',
-              }}
-            >
-              {name}
-            </p>
-          </div>
-
-          {/* TAP TO VOTE badge — bottom center */}
-          {!selected && !dimmed && (
-            <div
-              style={{
-                position: 'absolute',
-                bottom: '14px',
-                left: 0,
-                right: 0,
-                display: 'flex',
-                justifyContent: 'center',
-              }}
-            >
-              <span
+            {/* Name overlay — top */}
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: '16px' }}>
+              <p
                 style={{
-                  background: 'rgba(0,0,0,0.72)',
+                  fontFamily: 'var(--font-playfair, "Playfair Display", Georgia, serif)',
+                  fontWeight: 700,
+                  fontSize: 'clamp(1.75rem, 5vw, 2.75rem)',
                   color: '#FFFFFF',
-                  fontWeight: 800,
-                  fontSize: 'clamp(0.875rem, 2.2vw, 1.125rem)',
-                  letterSpacing: '0.1em',
-                  textTransform: 'uppercase',
-                  padding: '6px 14px',
-                  borderRadius: 9999,
-                  backdropFilter: 'blur(4px)',
-                  WebkitBackdropFilter: 'blur(4px)',
+                  margin: 0,
+                  lineHeight: 1.2,
+                  textShadow: '0 1px 4px rgba(0,0,0,0.5)',
                 }}
               >
-                Tap to vote
-              </span>
+                {name}
+              </p>
             </div>
-          )}
 
-          {/* Selected checkmark badge */}
-          {selected && (
-            <div
-              style={{
-                position: 'absolute',
-                top: '10px',
-                right: '10px',
-                width: 28,
-                height: 28,
-                borderRadius: '50%',
-                background: accentColor,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-              }}
-            >
-              <Check size={15} color="#FFF" strokeWidth={3} />
-            </div>
-          )}
-        </div>
+            {/* TAP TO VOTE badge — bottom center */}
+            {!selected && !dimmed && (
+              <div
+                style={{
+                  position: 'absolute',
+                  bottom: '14px',
+                  left: 0,
+                  right: 0,
+                  display: 'flex',
+                  justifyContent: 'center',
+                }}
+              >
+                <span
+                  style={{
+                    background: 'rgba(0,0,0,0.72)',
+                    color: '#FFFFFF',
+                    fontWeight: 800,
+                    fontSize: 'clamp(0.875rem, 2.2vw, 1.125rem)',
+                    letterSpacing: '0.1em',
+                    textTransform: 'uppercase',
+                    padding: '6px 14px',
+                    borderRadius: 9999,
+                    backdropFilter: 'blur(4px)',
+                    WebkitBackdropFilter: 'blur(4px)',
+                  }}
+                >
+                  Tap to vote
+                </span>
+              </div>
+            )}
+
+            {/* Selected checkmark badge */}
+            {selected && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '10px',
+                  right: '10px',
+                  width: 28,
+                  height: 28,
+                  borderRadius: '50%',
+                  background: accentColor,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                }}
+              >
+                <Check size={15} color="#FFF" strokeWidth={3} />
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </button>
   );
