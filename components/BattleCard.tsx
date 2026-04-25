@@ -21,6 +21,7 @@ export default function BattleCard({ name, image, side, onClick, selected, dimme
     side === 'a'
       ? 'linear-gradient(135deg, #D93025 0%, #9B1C15 100%)'
       : 'linear-gradient(135deg, #3A3A3A 0%, #1C1C1C 100%)';
+  const isLogo = image?.startsWith('/restaurants/');
 
   return (
     <button
@@ -64,7 +65,7 @@ export default function BattleCard({ name, image, side, onClick, selected, dimme
           style={{
             position: 'relative',
             height: fillHeight ? '100%' : compact ? '260px' : 'clamp(340px, 58vh, 620px)',
-            background: fallbackGradient,
+            background: isLogo ? '#FFF8E7' : fallbackGradient,
             overflow: 'hidden',
           }}
         >
@@ -73,7 +74,7 @@ export default function BattleCard({ name, image, side, onClick, selected, dimme
               src={image}
               alt={name}
               fill
-              style={{ objectFit: 'cover' }}
+              style={{ objectFit: isLogo ? 'contain' : 'cover', padding: isLogo ? '24px' : 0 }}
               sizes="(max-width: 480px) 50vw, 240px"
               priority
             />
@@ -92,19 +93,21 @@ export default function BattleCard({ name, image, side, onClick, selected, dimme
             </div>
           )}
 
-          {/* Top gradient for name readability */}
-          <div
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              height: '140px',
-              background: 'linear-gradient(to bottom, rgba(0,0,0,0.80), transparent)',
-            }}
-          />
+          {/* Top gradient for name readability — only for photo images */}
+          {!isLogo && (
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: '140px',
+                background: 'linear-gradient(to bottom, rgba(0,0,0,0.80), transparent)',
+              }}
+            />
+          )}
 
-          {/* Name overlay — top */}
+          {/* Name overlay */}
           <div
             style={{
               position: 'absolute',
@@ -119,10 +122,10 @@ export default function BattleCard({ name, image, side, onClick, selected, dimme
                 fontFamily: 'var(--font-playfair, "Playfair Display", Georgia, serif)',
                 fontWeight: 700,
                 fontSize: 'clamp(1.75rem, 5vw, 2.75rem)',
-                color: '#FFFFFF',
+                color: isLogo ? '#1C1C1C' : '#FFFFFF',
                 margin: 0,
                 lineHeight: 1.2,
-                textShadow: '0 1px 4px rgba(0,0,0,0.5)',
+                textShadow: isLogo ? 'none' : '0 1px 4px rgba(0,0,0,0.5)',
               }}
             >
               {name}
