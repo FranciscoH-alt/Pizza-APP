@@ -461,23 +461,33 @@ export default function BattlePage() {
 
                 <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
                   {/* Code badge */}
-                  <div style={{ background: '#FFF8E7', border: '1.5px dashed #E8A020', borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
-                    <div>
-                      <p style={{ margin: 0, fontSize: '0.625rem', fontWeight: 700, color: '#8A7A6A', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Your promo code</p>
-                      <p style={{ margin: '4px 0 0', fontFamily: 'var(--font-ibm-mono, monospace)', fontWeight: 700, fontSize: '1.375rem', color: '#1C1C1C', letterSpacing: '0.12em' }}>{generatedPromoCode}</p>
+                  <div style={{ background: '#FFF8E7', border: '1.5px dashed #E8A020', borderRadius: 12, overflow: 'hidden' }}>
+                    {/* Deal description */}
+                    <div style={{ padding: '14px 20px 12px', borderBottom: '1px dashed #E8A020' }}>
+                      <p style={{ margin: 0, fontSize: '0.6875rem', fontWeight: 700, color: '#8A7A6A', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Your deal</p>
+                      <p style={{ margin: '4px 0 0', fontFamily: 'var(--font-playfair, "Playfair Display", serif)', fontWeight: 700, fontSize: '1.25rem', color: '#1C1C1C', lineHeight: 1.2 }}>
+                        $5 off any order over $30
+                      </p>
                     </div>
-                    <button
-                      onClick={async () => {
-                        if (!generatedPromoCode) return;
-                        await navigator.clipboard.writeText(generatedPromoCode);
-                        logEvent({ event_name: 'promo_code_copied', session_id: getOrCreateSessionId(), metadata: { restaurant: PROMO_CONFIG[promoLocation!].name, code: generatedPromoCode } });
-                        setPromoCopied(true);
-                        setTimeout(() => setPromoCopied(false), 2000);
-                      }}
-                      style={{ flexShrink: 0, background: promoCopied ? '#2D6A4F' : '#1C1C1C', color: '#FFF8E7', border: 'none', borderRadius: 9999, padding: '10px 20px', fontWeight: 700, fontSize: '0.8125rem', cursor: 'pointer', transition: 'background 0.2s', letterSpacing: '0.02em', whiteSpace: 'nowrap' }}
-                    >
-                      {promoCopied ? '✓ Copied!' : 'Copy'}
-                    </button>
+                    {/* Code row */}
+                    <div style={{ padding: '12px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                      <div>
+                        <p style={{ margin: 0, fontSize: '0.625rem', fontWeight: 700, color: '#8A7A6A', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Promo code</p>
+                        <p style={{ margin: '4px 0 0', fontFamily: 'var(--font-ibm-mono, monospace)', fontWeight: 700, fontSize: '1.375rem', color: '#1C1C1C', letterSpacing: '0.12em' }}>{generatedPromoCode}</p>
+                      </div>
+                      <button
+                        onClick={async () => {
+                          if (!generatedPromoCode) return;
+                          await navigator.clipboard.writeText(generatedPromoCode);
+                          logEvent({ event_name: 'promo_code_copied', session_id: getOrCreateSessionId(), metadata: { restaurant: PROMO_CONFIG[promoLocation!].name, code: generatedPromoCode } });
+                          setPromoCopied(true);
+                          setTimeout(() => setPromoCopied(false), 2000);
+                        }}
+                        style={{ flexShrink: 0, background: promoCopied ? '#2D6A4F' : '#1C1C1C', color: '#FFF8E7', border: 'none', borderRadius: 9999, padding: '10px 20px', fontWeight: 700, fontSize: '0.8125rem', cursor: 'pointer', transition: 'background 0.2s', letterSpacing: '0.02em', whiteSpace: 'nowrap' }}
+                      >
+                        {promoCopied ? '✓ Copied!' : 'Copy'}
+                      </button>
+                    </div>
                   </div>
 
                   {/* Lake Orion only notice */}
