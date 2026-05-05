@@ -69,7 +69,7 @@ export default function RootLayout({
         <Analytics />
         <Heartbeat />
         <p style={{ position: 'fixed', bottom: '6px', right: '8px', fontSize: '9px', opacity: 0.25, color: '#1C1C1C', fontFamily: 'var(--font-inter)', pointerEvents: 'none', zIndex: 9999, userSelect: 'none' }}>
-          © keyservicecorp
+          © 2026 Key Service Corporation. All Rights Reserved.
         </p>
       </body>
     </html>

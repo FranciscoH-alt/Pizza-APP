@@ -370,9 +370,8 @@ export default function BattlePage() {
               <div style={{ display: 'flex', flexDirection: 'row', gap: '10px' }}>
                 <button
                   onClick={() => {
-                    const code = generatePromoCode('cottageinn');
                     setPromoLocation('cottageinn');
-                    setGeneratedPromoCode(code);
+                    setGeneratedPromoCode('LO5');
                     setSelectedPromoRestaurant(PROMO_CONFIG.cottageinn.name);
                     setScreen('promo');
                     if (featuredDeal) logEvent({ event_name: 'deal_clicked', session_id: getOrCreateSessionId(), deal_id: featuredDeal.id, metadata: { cta_type: 'reveal', restaurant: featuredDeal.restaurant_name, source: 'battle_results' } });
@@ -411,7 +410,7 @@ export default function BattlePage() {
               <h2 style={{ margin: '6px 0 8px', fontFamily: 'var(--font-playfair, "Playfair Display", serif)', fontWeight: 700, fontSize: 'clamp(1.625rem, 5vw, 2.25rem)', color: '#1C1C1C', lineHeight: 1.2, letterSpacing: '-0.01em' }}>
                 Grab a promo code
               </h2>
-              <p style={{ margin: 0, fontSize: '0.9375rem', color: '#8A7A6A', lineHeight: 1.5 }}>Pick your spot and get an exclusive code.</p>
+              <p style={{ margin: 0, fontSize: '0.9375rem', color: '#8A7A6A', lineHeight: 1.5 }}>Show this code at checkout to redeem your deal.</p>
             </div>
 
             {!promoLocation ? (
@@ -479,6 +478,14 @@ export default function BattlePage() {
                     >
                       {promoCopied ? '✓ Copied!' : 'Copy'}
                     </button>
+                  </div>
+
+                  {/* Lake Orion only notice */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', background: '#FFF0C8', border: '1px solid #E8A020', borderRadius: 8, padding: '8px 12px' }}>
+                    <span style={{ fontSize: '0.75rem' }}>📍</span>
+                    <p style={{ margin: 0, fontSize: '0.75rem', fontWeight: 700, color: '#7A5500', textAlign: 'center' }}>
+                      Lake Orion location only
+                    </p>
                   </div>
 
                   {/* Claim CTA */}
