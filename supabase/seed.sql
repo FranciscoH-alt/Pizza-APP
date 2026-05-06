@@ -103,6 +103,20 @@ INSERT INTO battles (title, option_a, option_b, image_a, image_b, description, l
   'scheduled',
   0,
   0
+),
+(
+  'Ty Cobb vs Al Kaline',
+  'Ty Cobb',
+  'Al Kaline',
+  '/players/ty-cobb.jpg',
+  '/players/al-kaline.jpg',
+  '{"question":"Which Detroit Tiger baseball player fished in Lake Orion & Oxford?","correct_option":"a","fun_fact":"Ty Cobb was known to fish the lakes of Lake Orion & Oxford, Michigan — right in his own backyard."}',
+  'Lake Orion, MI',
+  CURRENT_DATE + 7,
+  CURRENT_DATE + 7,
+  'scheduled',
+  0,
+  0
 );
 
 -- ============================================================

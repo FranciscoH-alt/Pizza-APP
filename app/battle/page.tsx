@@ -36,7 +36,22 @@ const OPTION_IMAGE_FALLBACK: Record<string, string> = {
   "buddy's pizza":     '/restaurants/buddys.png',
   'classic margherita':'/pizza/margherita.png',
   'meat lovers':       '/pizza/meatlovers.png',
+  'ty cobb':           '/players/ty-cobb.jpg',
+  'al kaline':         '/players/al-kaline.jpg',
 };
+
+function parseBattleTrivia(battle: Battle): { question: string | null; correct_option: 'a' | 'b' | null; fun_fact: string | null } {
+  try {
+    const parsed = JSON.parse(battle.description ?? '');
+    return {
+      question: parsed.question ?? null,
+      correct_option: parsed.correct_option ?? null,
+      fun_fact: parsed.fun_fact ?? null,
+    };
+  } catch {
+    return { question: null, correct_option: null, fun_fact: null };
+  }
+}
 
 function resolveImage(dbImage: string | null, optionName: string): string | null {
   if (dbImage) return dbImage;
@@ -315,7 +330,7 @@ export default function BattlePage() {
           <div className="animate-fade-up" style={{ display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'space-evenly' }}>
             <div style={{ textAlign: 'center', padding: '0 8px' }}>
               <h2 style={{ fontFamily: 'var(--font-playfair, "Playfair Display", serif)', fontWeight: 700, fontSize: 'clamp(2.5rem, 6vw, 4rem)', color: '#1C1C1C', margin: 0, letterSpacing: '-0.02em', lineHeight: 1.15 }}>
-                Which style owns your heart?
+                {parseBattleTrivia(battle).question ?? 'Which style owns your heart?'}
               </h2>
             </div>
 
@@ -355,6 +370,28 @@ export default function BattlePage() {
             <div style={{ background: '#FFFFFF', borderRadius: 24, padding: '20px', boxShadow: '0 2px 16px rgba(28,28,28,0.08)' }}>
               <ResultsBar battle={battle} voted={voted} hideTagline />
             </div>
+
+            {(() => {
+              const trivia = parseBattleTrivia(battle);
+              if (!trivia.correct_option) return null;
+              const correctName = trivia.correct_option === 'a' ? battle.option_a : battle.option_b;
+              const gotItRight = voted === trivia.correct_option;
+              return (
+                <div style={{ background: '#F9F6F0', border: '1px solid #E0D4B8', borderRadius: 12, padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                  <p style={{ margin: 0, fontSize: '0.6875rem', fontWeight: 700, color: gotItRight ? '#2D6A4F' : '#8A7A6A', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                    {gotItRight ? '✓ You got it right!' : 'The correct answer'}
+                  </p>
+                  <p style={{ margin: 0, fontSize: '0.875rem', fontWeight: 700, color: '#1C1C1C' }}>
+                    {correctName}
+                  </p>
+                  {trivia.fun_fact && (
+                    <p style={{ margin: '2px 0 0', fontSize: '0.8125rem', color: '#5A4A3A', lineHeight: 1.45 }}>
+                      {trivia.fun_fact}
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {/* Play Again — shown first when there are unvoted battles */}
