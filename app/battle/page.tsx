@@ -377,19 +377,9 @@ export default function BattlePage() {
               const correctName = trivia.correct_option === 'a' ? battle.option_a : battle.option_b;
               const gotItRight = voted === trivia.correct_option;
               return (
-                <div style={{ background: '#F9F6F0', border: '1px solid #E0D4B8', borderRadius: 12, padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                  <p style={{ margin: 0, fontSize: '0.6875rem', fontWeight: 700, color: gotItRight ? '#2D6A4F' : '#8A7A6A', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
-                    {gotItRight ? '✓ You got it right!' : 'The correct answer'}
-                  </p>
-                  <p style={{ margin: 0, fontSize: '0.875rem', fontWeight: 700, color: '#1C1C1C' }}>
-                    {correctName}
-                  </p>
-                  {trivia.fun_fact && (
-                    <p style={{ margin: '2px 0 0', fontSize: '0.8125rem', color: '#5A4A3A', lineHeight: 1.45 }}>
-                      {trivia.fun_fact}
-                    </p>
-                  )}
-                </div>
+                <p style={{ margin: 0, textAlign: 'center', fontSize: '0.8125rem', fontWeight: 600, color: gotItRight ? '#2D6A4F' : '#8A7A6A' }}>
+                  {gotItRight ? '✓ You got it right!' : `The answer was ${correctName}.`}
+                </p>
               );
             })()}
 
