@@ -373,12 +373,10 @@ export default function BattlePage() {
 
             {(() => {
               const trivia = parseBattleTrivia(battle);
-              if (!trivia.correct_option) return null;
-              const correctName = trivia.correct_option === 'a' ? battle.option_a : battle.option_b;
-              const gotItRight = voted === trivia.correct_option;
+              if (!trivia.fun_fact) return null;
               return (
-                <p style={{ margin: 0, textAlign: 'center', fontSize: '0.8125rem', fontWeight: 600, color: gotItRight ? '#2D6A4F' : '#8A7A6A' }}>
-                  {gotItRight ? '✓ You got it right!' : `The answer was ${correctName}.`}
+                <p style={{ margin: 0, textAlign: 'center', fontSize: '0.8125rem', color: '#8A7A6A', lineHeight: 1.5 }}>
+                  {trivia.fun_fact}
                 </p>
               );
             })()}
