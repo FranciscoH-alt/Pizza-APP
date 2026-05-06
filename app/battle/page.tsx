@@ -367,17 +367,18 @@ export default function BattlePage() {
               </h2>
             </div>
 
-            <div style={{ background: '#FFFFFF', borderRadius: 24, padding: '20px', boxShadow: '0 2px 16px rgba(28,28,28,0.08)' }}>
-              <ResultsBar battle={battle} voted={voted} hideTagline />
-            </div>
-
             {(() => {
               const trivia = parseBattleTrivia(battle);
-              if (!trivia.fun_fact) return null;
+              const correctName = trivia.correct_option === 'a' ? battle.option_a : battle.option_b;
+              const triviaLine = trivia.correct_option
+                ? voted === trivia.correct_option
+                  ? '✓ You got it right!'
+                  : `The answer was ${correctName}`
+                : undefined;
               return (
-                <p style={{ margin: 0, textAlign: 'center', fontSize: '0.8125rem', color: '#8A7A6A', lineHeight: 1.5 }}>
-                  {trivia.fun_fact}
-                </p>
+                <div style={{ background: '#FFFFFF', borderRadius: 24, padding: '20px', boxShadow: '0 2px 16px rgba(28,28,28,0.08)' }}>
+                  <ResultsBar battle={battle} voted={voted} hideTagline triviaLine={triviaLine} />
+                </div>
               );
             })()}
 

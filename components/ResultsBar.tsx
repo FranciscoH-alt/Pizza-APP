@@ -6,6 +6,7 @@ interface ResultsBarProps {
   battle: Battle;
   voted: VoteSelection;
   hideTagline?: boolean;
+  triviaLine?: string;
 }
 
 const TAGLINES: Record<string, string[]> = {
@@ -34,7 +35,7 @@ function getStatus(vote: 'a' | 'b', votesA: number, votesB: number): { emoji: st
   return { emoji: '⚔️', text: 'Your team is close behind!', color: '#D93025' };
 }
 
-export default function ResultsBar({ battle, voted, hideTagline }: ResultsBarProps) {
+export default function ResultsBar({ battle, voted, hideTagline, triviaLine }: ResultsBarProps) {
   if (!voted) return null;
 
   const votedOption = voted === 'a' ? battle.option_a : battle.option_b;
@@ -54,7 +55,12 @@ export default function ResultsBar({ battle, voted, hideTagline }: ResultsBarPro
       )}
 
       {/* Scoreboard */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#F7F0E0', borderRadius: 14, padding: '32px 20px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#F7F0E0', borderRadius: 14, padding: '32px 20px', flexWrap: 'wrap' }}>
+        {triviaLine && (
+          <p style={{ width: '100%', margin: '0 0 16px', textAlign: 'center', fontSize: '0.8125rem', fontWeight: 600, color: '#8A7A6A' }}>
+            {triviaLine}
+          </p>
+        )}
         <div style={{ flex: 1, textAlign: 'center' }}>
           <p style={{ margin: 0, fontSize: 'clamp(1rem, 2.5vw, 1.25rem)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#8A7A6A' }}>YOUR PICK</p>
           <p style={{ margin: '8px 0 0', fontFamily: 'var(--font-ibm-mono, monospace)', fontWeight: 700, fontSize: 'clamp(3rem, 7vw, 4.5rem)', color: '#D93025', lineHeight: 1 }}>{userVotes.toLocaleString()}</p>
