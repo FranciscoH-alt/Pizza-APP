@@ -9,6 +9,7 @@ import { getVoteForBattle, getOrCreateSessionId, saveVote, getVotedBattles, reso
 import { recordDailyVote } from '@/lib/streak';
 import { logEvent } from '@/lib/analytics';
 import { supabase } from '@/lib/supabase/client';
+import { parseBattleTrivia as parseTrivia } from '@/lib/battle-trivia';
 import BattleCard from '@/components/BattleCard';
 import ResultsBar from '@/components/ResultsBar';
 import SkeletonBattle from '@/components/SkeletonBattle';
@@ -41,16 +42,7 @@ const OPTION_IMAGE_FALLBACK: Record<string, string> = {
 };
 
 function parseBattleTrivia(battle: Battle): { question: string | null; correct_option: 'a' | 'b' | null; fun_fact: string | null } {
-  try {
-    const parsed = JSON.parse(battle.description ?? '');
-    return {
-      question: parsed.question ?? null,
-      correct_option: parsed.correct_option ?? null,
-      fun_fact: parsed.fun_fact ?? null,
-    };
-  } catch {
-    return { question: null, correct_option: null, fun_fact: null };
-  }
+  return parseTrivia(battle.description);
 }
 
 function resolveImage(dbImage: string | null, optionName: string): string | null {

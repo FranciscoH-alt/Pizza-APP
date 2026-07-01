@@ -49,6 +49,12 @@ export interface AnalyticsEvent {
 
 export type VoteSelection = 'a' | 'b' | null;
 
+export interface AdminBattleListItem extends Pick<Battle, 'id' | 'title' | 'option_a' | 'option_b' | 'image_a' | 'image_b' | 'start_date' | 'end_date' | 'status' | 'votes_a' | 'votes_b'> {
+  question: string | null;
+  correct_option: 'a' | 'b' | null;
+  fun_fact: string | null;
+}
+
 export interface StreakData {
   current: number;
   longest: number;
