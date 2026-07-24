@@ -66,7 +66,8 @@ export async function POST(req: NextRequest) {
   const optionA = (form.get('option_a') as string | null)?.trim() ?? '';
   const optionB = (form.get('option_b') as string | null)?.trim() ?? '';
   const question = (form.get('question') as string | null)?.trim() ?? '';
-  const correctOption = form.get('correct_option') as string | null;
+  const rawCorrectOption = form.get('correct_option') as string | null;
+  const correctOption: 'a' | 'b' | null = rawCorrectOption === 'a' || rawCorrectOption === 'b' ? rawCorrectOption : null;
   const funFact = (form.get('fun_fact') as string | null)?.trim() ?? '';
   const rawLiveDate = (form.get('live_date') as string | null) ?? '';
   const imageA = form.get('image_a');
@@ -77,9 +78,6 @@ export async function POST(req: NextRequest) {
   }
   if (!question) {
     return NextResponse.json({ error: 'Please enter a question.' }, { status: 400 });
-  }
-  if (correctOption !== 'a' && correctOption !== 'b') {
-    return NextResponse.json({ error: 'Please choose which option is correct.' }, { status: 400 });
   }
   if (!(imageA instanceof File) || !(imageB instanceof File) || imageA.size === 0 || imageB.size === 0) {
     return NextResponse.json({ error: 'Please choose an image for both options.' }, { status: 400 });

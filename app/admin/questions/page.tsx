@@ -139,7 +139,7 @@ export default function ManageQuestionsPage() {
   }
 
   const canSubmit =
-    optionA.trim() && optionB.trim() && imageA && imageB && question.trim() && correctOption && !submitting;
+    optionA.trim() && optionB.trim() && imageA && imageB && question.trim() && !submitting;
 
   function resetForm() {
     setOptionA('');
@@ -164,7 +164,7 @@ export default function ManageQuestionsPage() {
       form.set('option_a', optionA.trim());
       form.set('option_b', optionB.trim());
       form.set('question', question.trim());
-      form.set('correct_option', correctOption!);
+      if (correctOption) form.set('correct_option', correctOption);
       form.set('fun_fact', funFact.trim());
       form.set('live_date', liveDate);
       form.set('image_a', imageA!);
@@ -325,8 +325,8 @@ export default function ManageQuestionsPage() {
           </div>
 
           <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#6B7280', marginBottom: 6 }}>Correct answer</label>
-            <div style={{ display: 'flex', gap: 16 }}>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#6B7280', marginBottom: 6 }}>Correct answer (optional)</label>
+            <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.875rem', cursor: 'pointer' }}>
                 <input type="radio" name="correct" checked={correctOption === 'a'} onChange={() => setCorrectOption('a')} />
                 {optionA.trim() || 'Option A'}
@@ -335,6 +335,15 @@ export default function ManageQuestionsPage() {
                 <input type="radio" name="correct" checked={correctOption === 'b'} onChange={() => setCorrectOption('b')} />
                 {optionB.trim() || 'Option B'}
               </label>
+              {correctOption && (
+                <button
+                  type="button"
+                  onClick={() => setCorrectOption(null)}
+                  style={{ background: 'none', border: 'none', color: '#9CA3AF', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', padding: 0, textDecoration: 'underline' }}
+                >
+                  Clear
+                </button>
+              )}
             </div>
           </div>
 

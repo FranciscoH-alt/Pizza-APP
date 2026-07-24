@@ -20,7 +20,7 @@ export function parseBattleTrivia(description: string | null): BattleTrivia {
 }
 
 /** Builds the `description` column value for a new trivia battle. */
-export function stringifyBattleTrivia(input: { question: string; correct_option: 'a' | 'b'; fun_fact?: string | null }): string {
+export function stringifyBattleTrivia(input: { question: string; correct_option: 'a' | 'b' | null; fun_fact?: string | null }): string {
   return JSON.stringify({
     question: input.question,
     correct_option: input.correct_option,
